@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const S = {
-    graph: null, nodes: [], nodesById: new Map(), adj: new Map(),
+    graph: null, realPack: null, routeMeters: 0, nodes: [], nodesById: new Map(), adj: new Map(),
     start: 'berlin', end: 'paris', via: [], route: [],
     zoom: 1, panX: 0, panY: 0, width: 0, height: 0, dpr: 1,
     dragging: false, dragFrom: null, moved: false, pointer: null, live: null,
@@ -20,6 +20,10 @@
   }
   function neighbors(node) { return S.adj.get(node) || []; }
   function shortest(a,b) {
+    if (S.realPack) {
+      const start=S.nodesById.get(a)?.roadNode, end=S.nodesById.get(b)?.roadNode;
+      return window.ETS2RoutePack.shortest(S.realPack.adj,start,end);
+    }
     if (!S.nodesById.has(a) || !S.nodesById.has(b)) return null;
     const dist = new Map(S.nodes.map(n => [n.id, Infinity]));
     const prev = new Map(), waiting = new Set(S.nodes.map(n => n.id));
@@ -38,20 +42,23 @@
     if (dist.get(b) === Infinity) return null;
     const route = [b]; let p=b;
     while (p !== a) { p=prev.get(p); if (!p) return null; route.unshift(p); }
-    return route;
+    return {path:route,meters:0};
   }
   function buildRoute() {
     const stops = [S.start, ...S.via, S.end].filter(Boolean);
-    const full=[];
+    const full=[];let meters=0;
     for(let i=1;i<stops.length;i++) {
       const part=shortest(stops[i-1],stops[i]);
-      if(!part) { S.route=[]; $('routeStats').textContent='Нет пути между точками'; render(); return; }
-      full.push(...(i===1?part:part.slice(1)));
+      if(!part) { S.route=[]; S.routeMeters=0; $('routeStats').textContent='Нет пути между точками'; render(); return; }
+      full.push(...(i===1?part.path:part.path.slice(1)));
+      meters+=part.meters;
     }
-    S.route=full;
+    S.route=full;S.routeMeters=meters;
     const count=Math.max(full.length-1,0);
-    $('routeStats').textContent=`${count} участков · ${Math.max(stops.length-2,0)} через точек`;
-    $('routeType').textContent=S.graph?.coordinateSystem==='demo'?'Схема · не километры':'Дороги ETS2';
+    $('routeStats').textContent=S.realPack
+      ? `${(meters/1000).toFixed(1)} км по графу · ${count} участков`
+      : `${count} участков · ${Math.max(stops.length-2,0)} через точек`;
+    $('routeType').textContent=S.realPack?'Приблизительный маршрут':S.graph?.coordinateSystem==='demo'?'Схема · не километры':'Дороги ETS2';
     localStorage.setItem('ets2-plan',JSON.stringify({start:S.start,end:S.end,via:S.via}));
     render();
   }
@@ -83,7 +90,12 @@
     canvas.width=Math.round(rect.width*S.dpr);canvas.height=Math.round(rect.height*S.dpr);
     ctx.setTransform(S.dpr,0,0,S.dpr,0,0);render();
   }
-  function bounds(){const xs=S.nodes.map(n=>n.x), zs=S.nodes.map(n=>n.z);
+  function bounds(){
+    if (S.realPack) {
+      const b=S.realPack.bounds;
+      return {...b,scale:Math.max(.00001,Math.min((S.width-110)/b.dx,(S.height-200)/b.dz))};
+    }
+    const xs=S.nodes.map(n=>n.x), zs=S.nodes.map(n=>n.z);
     const minX=Math.min(...xs),maxX=Math.max(...xs),minZ=Math.min(...zs),maxZ=Math.max(...zs);
     return {cx:(minX+maxX)/2,cz:(minZ+maxZ)/2,scale:Math.max(.01,Math.min((S.width-110)/(maxX-minX||1),(S.height-200)/(maxZ-minZ||1)))};
   }
@@ -102,8 +114,24 @@
     ctx.strokeStyle='#172b37';ctx.lineWidth=.6;
     for(let x=0;x<W;x+=52){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
     for(let y=0;y<H;y+=52){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    for(const edge of S.graph.edges){const a=S.nodesById.get(edge[0]),b=S.nodesById.get(edge[1]);if(a&&b)drawLine([a,b],'#344f60',3);}
-    const routeNodes=S.route.map(id=>S.nodesById.get(id)).filter(Boolean);
+    if (S.realPack) {
+      // Draw only visible links in a single Canvas path, not one stroke per edge.
+      const b=bounds(), factor=b.scale*S.zoom, left=S.width/2+S.panX, top=S.height/2+S.panY;
+      const points=S.realPack.points;ctx.strokeStyle='#355266';ctx.lineWidth=1.5;ctx.beginPath();
+      for (const [ia,ib] of S.realPack.roads) {
+        const a=points[ia], c=points[ib];
+        const ax=left+(a[0]-b.cx)*factor, ay=top+(a[1]-b.cz)*factor;
+        const bx=left+(c[0]-b.cx)*factor, by=top+(c[1]-b.cz)*factor;
+        if(Math.max(ax,bx)<-10||Math.min(ax,bx)>W+10||Math.max(ay,by)<-10||Math.min(ay,by)>H+10)continue;
+        ctx.moveTo(ax,ay);ctx.lineTo(bx,by);
+      }
+      ctx.stroke();
+    } else {
+      for(const edge of S.graph.edges){const a=S.nodesById.get(edge[0]),b=S.nodesById.get(edge[1]);if(a&&b)drawLine([a,b],'#344f60',3);}
+    }
+    const routeNodes=(S.realPack?S.route.map(i=>{
+      const p=S.realPack.points[i];return p?{x:p[0],z:p[1]}:null;
+    }):S.route.map(id=>S.nodesById.get(id))).filter(Boolean);
     if(routeNodes.length>1){ctx.shadowColor='#45e0a7';ctx.shadowBlur=15;drawLine(routeNodes,'#6de2b0',5);ctx.shadowBlur=0;}
     const marked=new Set([S.start,S.end,...S.via]);
     for(const n of S.nodes){
@@ -116,7 +144,7 @@
       ctx.font=`${selected?'650 ':''}12px system-ui`;ctx.fillStyle=selected?'#edfafa':'#a9bdc9';
       ctx.textAlign='left';ctx.fillText(n.name,p.x+13,p.y-8);
     }
-    if(S.graph.coordinateSystem==='ets2'&&S.live&&Number.isFinite(S.live.x)&&Number.isFinite(S.live.z)){
+    if(S.realPack&&S.live&&Number.isFinite(S.live.x)&&Number.isFinite(S.live.z)){
       const p=toScreen(S.live.x,S.live.z);ctx.save();ctx.translate(p.x,p.y);
       ctx.rotate((S.live.heading||0)*Math.PI*2);ctx.fillStyle='#fdf8b8';ctx.strokeStyle='#183036';ctx.lineWidth=3;
       ctx.beginPath();ctx.moveTo(0,-14);ctx.lineTo(10,11);ctx.lineTo(0,7);ctx.lineTo(-10,11);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
@@ -187,17 +215,57 @@
         S.live=m;
         $('speed').textContent=Number.isFinite(m.speedKmh)?Math.round(m.speedKmh):'—';
         $('coord').textContent=Number.isFinite(m.x)&&Number.isFinite(m.z)?`${Math.round(m.x)} / ${Math.round(m.z)}`:'—';
-        $('liveHint').textContent=S.graph.coordinateSystem==='demo'?'Данные получены! Для отображения грузовика на карте нужен настоящий граф ETS2.':'Положение грузовика обновляется на карте.';
+        $('liveHint').textContent=S.graph?.coordinateSystem==='demo'?'Данные получены! Для отображения грузовика на карте нужен настоящий граф ETS2.':'Положение грузовика обновляется на карте.';
         status('Игра подключена',true);render();
       }
     };
     let hadError=false;
     ws.onerror=()=>{if(S.ws===ws){hadError=true;status('Ошибка соединения',false,isLan
-      ? 'Проверь мост, IP, брандмауэр Windows и разрешение браузера на локальную сеть.'
+      ? 'Проверь мост, IP, брандмауэр Windows и разрешение Chrome/Edge на локальную сеть.'
       : 'Проверь адрес Cloudflare Worker и доступность сети.');}};
     ws.onclose=()=>{if(S.ws===ws&&!hadError)status('Отключено',false,'Соединение прервано. Подключитесь снова.');};
   }
 
+  function loadMap(input, isReal) {
+    S.realPack=isReal ? window.ETS2RoutePack.normalize(input) : null;
+    S.graph=S.realPack || input;
+    if(!S.realPack && !['demo','ets2'].includes(S.graph.coordinateSystem)) {
+      throw new Error('Неизвестная система координат');
+    }
+    S.nodes=(S.realPack?S.realPack.nodes:S.graph.nodes).filter(
+      n=>typeof n.id==='string'&&typeof n.name==='string'&&Number.isFinite(n.x)&&Number.isFinite(n.z));
+    if(S.nodes.length<2)throw new Error('Недостаточно городов на карте');
+    S.nodesById=new Map(S.nodes.map(n=>[n.id,n]));
+    S.adj=new Map(S.nodes.map(n=>[n.id,[]]));
+    if(!S.realPack){
+      for(const [a,b] of S.graph.edges){const u=S.nodesById.get(a),v=S.nodesById.get(b);if(!u||!v)continue;
+        const d=Math.hypot(u.x-v.x,u.z-v.z);S.adj.get(a).push([b,d]);S.adj.get(b).push([a,d]);}
+    }
+    const saved=JSON.parse(localStorage.getItem('ets2-plan')||'null');
+    S.start=S.nodesById.has(saved?.start)?saved.start:S.nodes[0].id;
+    S.end=S.nodesById.has(saved?.end)?saved.end:S.nodes[1].id;
+    S.via=Array.isArray(saved?.via)?saved.via.filter(id=>S.nodesById.has(id)).slice(0,8):[];
+    S.zoom=1;S.panX=0;S.panY=0;
+    populate();resize();buildRoute();
+    $('mapState').textContent=S.realPack?'РЕАЛЬНЫЙ ГРАФ':'ДЕМО-КАРТА';
+    $('mapState').classList.toggle('real',!!S.realPack);
+    $('mapTitle').textContent=S.graph.title||'Маршруты ETS2';
+    $('mapNotice').textContent=S.graph.notice||'';
+    $('mapImportStatus').textContent=S.realPack
+      ? `Загружено: ${S.nodes.length} городов, ${S.realPack.points.length} узлов, ${S.realPack.linkCount} направленных связей.`
+      : 'Используется демонстрационная схема. Реальная карта не загружена.';
+  }
+  async function loadFile(e){
+    const file=e.target.files?.[0];if(!file)return;
+    if(file.size>70*1024*1024){$('mapImportStatus').textContent='Файл слишком большой (максимум 70 МБ).';return;}
+    $('mapImportStatus').textContent='Читаю дорожный граф…';
+    try {
+      const parsed=JSON.parse(await file.text());
+      // Validate the entire pack before replacing the displayed map.
+      window.ETS2RoutePack.normalize(parsed);
+      loadMap(parsed,true);
+    }catch(error){$('mapImportStatus').textContent='Ошибка загрузки: '+error.message;console.error(error);}
+  }
   async function init(){
     $('relayUrl').value=S.relayUrl;
     $('lanUrl').value=S.lanUrl;
@@ -205,32 +273,23 @@
     S.connectionMode=$('connectionMode').value;
     setConnectionMode();
     try{
-      const resp=await fetch('./data/map.json');if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-      S.graph=await resp.json();
-      if(!['demo','ets2'].includes(S.graph.coordinateSystem))throw new Error('Неизвестная система координат');
-      S.nodes=S.graph.nodes.filter(n=>typeof n.id==='string'&&typeof n.name==='string'&&Number.isFinite(n.x)&&Number.isFinite(n.z));
-      if(S.nodes.length<2)throw new Error('Недостаточно узлов карты');
-      S.nodesById=new Map(S.nodes.map(n=>[n.id,n]));S.adj=new Map(S.nodes.map(n=>[n.id,[]]));
-      for(const [a,b] of S.graph.edges){const u=S.nodesById.get(a),v=S.nodesById.get(b);if(!u||!v)continue;
-        const d=Math.hypot(u.x-v.x,u.z-v.z);S.adj.get(a).push([b,d]);S.adj.get(b).push([a,d]);}
-      const p=JSON.parse(localStorage.getItem('ets2-plan')||'null');
-      S.start=S.nodesById.has(p?.start)?p.start:S.nodes[0].id;
-      S.end=S.nodesById.has(p?.end)?p.end:S.nodes[Math.min(S.nodes.length-1,1)].id;
-      S.via=Array.isArray(p?.via)?p.via.filter(id=>S.nodesById.has(id)).slice(0,8):[];
-      populate();resize();buildRoute();
-      $('mapState').textContent=S.graph.coordinateSystem==='demo'?'ДЕМО-КАРТА':'ДАННЫЕ ETS2';
-      $('mapState').classList.toggle('real',S.graph.coordinateSystem==='ets2');
-      $('mapTitle').textContent=S.graph.title||'Маршруты ETS2';
-      $('mapNotice').textContent=S.graph.notice||'';
+      const real=await fetch('./data/ets2-routepack.json',{cache:'no-cache'});
+      if(real.ok) {
+        loadMap(await real.json(),true);
+      } else {
+        const resp=await fetch('./data/map.json');if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+        loadMap(await resp.json(),false);
+      }
     }catch(error){$('mapNotice').textContent='Не удалось загрузить карту: '+error.message+'. Открывайте сайт через HTTP/HTTPS, а не file://';console.error(error);}
   }
+  $('mapFile').addEventListener('change',loadFile);
   $('startSelect').addEventListener('change',e=>{S.start=e.target.value;buildRoute();});
   $('finishSelect').addEventListener('change',e=>{S.end=e.target.value;buildRoute();});
   $('addWaypoint').addEventListener('click',()=>{if(!S.nodes.length||S.via.length>=8)return;S.via.push(S.end);refreshWaypoints();buildRoute();});
   $('swapRoute').addEventListener('click',()=>{[S.start,S.end]=[S.end,S.start];$('startSelect').value=S.start;$('finishSelect').value=S.end;S.via.reverse();refreshWaypoints();buildRoute();});
   $('copyRoute').addEventListener('click',async()=>{
     const names=ids=>ids.map(id=>S.nodesById.get(id)?.name||id);
-    const output=JSON.stringify({start:S.start,via:S.via,destination:S.end,path:S.route,stops:names([S.start,...S.via,S.end]),coordinateSystem:S.graph?.coordinateSystem},null,2);
+    const output=JSON.stringify({start:S.start,via:S.via,destination:S.end,path:S.route,stops:names([S.start,...S.via,S.end]),coordinateSystem:S.graph?.coordinateSystem,routeMeters:S.realPack?S.routeMeters:null},null,2);
     try{await navigator.clipboard.writeText(output);$('copyRoute').textContent='Скопировано ✓';}
     catch{window.prompt('Скопируйте JSON маршрута:',output);}
     setTimeout(()=>$('copyRoute').textContent='Скопировать маршрут',1500);
