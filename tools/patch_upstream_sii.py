@@ -17,8 +17,8 @@ def patch_parser(maps: Path) -> list[str]:
     if not parser.is_file() or not convert.is_file():
         raise RuntimeError("Upstream SII parser files not found; check cloned map tools.")
 
-    old_comment = r"pattern: /(\\/\\/|#).*/,"
-    new_comment = r"pattern: /\\/\\*[\\s\\S]*?\\*\\/|(?:\\/\\/|#)[^\\r\\n]*/,"
+    old_comment = r"pattern: /(\/\/|#).*/,"
+    new_comment = r"pattern: /\/\*[\s\S]*?\*\/|(?:\/\/|#)[^\r\n]*/,"
     original = parser.read_text(encoding="utf-8")
     if old_comment in original:
         modified = original.replace(old_comment, new_comment, 1)
