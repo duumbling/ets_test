@@ -60,6 +60,53 @@ class MapCliInstallTests(unittest.TestCase):
                          ('npx', '--no-install', 'tsx',
                           'packages/clis/generator/index.ts'))
 
+    def test_graph_generation_avoids_broken_tinypool_check(self):
+        from pathlib import Path
+
+        with patch.object(build_real_map, 'run') as runner:
+            build_real_map.run_parser_and_graph(
+                Path('maps'), Path('game'), Path('maps/out/parser'),
+                Path('maps/out'))
+        graph_args = runner.call_args_list[1].args
+        self.assertEqual(graph_args[:4], (
+            'npx', '--no-install', 'tsx', 'packages/clis/generator/index.ts'))
+        self.assertIn('graph', graph_args)
+        self.assertNotIn('-c', graph_args)
+        self.assertNotIn('--check', graph_args)
+
+    def test_graph_only_reuses_existing_parser_output(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            parser = root / 'out/parser'
+            parser.mkdir(parents=True)
+            (parser / 'europe-nodes.json').write_text('[]')
+            (parser / 'europe-cities.json').write_text('[]')
+            with patch.object(build_real_map, 'run') as runner:
+                build_real_map.run_parser_and_graph(
+                    root, root / 'game', parser, root / 'out', graph_only=True)
+            self.assertEqual(runner.call_count, 1)
+            graph_args = runner.call_args.args
+            self.assertEqual(graph_args[:4], (
+                'npx', '--no-install', 'tsx',
+                'packages/clis/generator/index.ts'))
+            self.assertNotIn('-c', graph_args)
+
+    def test_graph_only_rejects_incomplete_parser_output(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.object(build_real_map, 'run') as runner:
+                with self.assertRaisesRegex(RuntimeError, 'missing'):
+                    build_real_map.run_parser_and_graph(
+                        root, root / 'game', root / 'out/parser',
+                        root / 'out', graph_only=True)
+                runner.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()
