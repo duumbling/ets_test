@@ -123,6 +123,43 @@ def check_windows_cpp_toolchain():
             'После установки открой новый терминал и повтори команду.'
         )
 
+# Only CLI tools and their direct internal libraries are necessary to build an
+# ETS2 routepack. The upstream monorepo also contains an Electron-based GUI,
+# whose postinstall script calls fs.symlinkSync and fails on standard Windows
+# accounts (EPERM). Skip all installation lifecycle scripts; then explicitly
+# build only the native addon used by the parser.
+MAP_WORKSPACES = (
+    'packages/clis/parser',
+    'packages/clis/generator',
+    'packages/libs/base',
+    'packages/libs/io',
+    'packages/libs/map',
+)
+
+
+def install_map_tools(maps: Path):
+    workspace_args = [item for workspace in MAP_WORKSPACES
+                      for item in ('--workspace', workspace)]
+    print('Устанавливаю CLI-зависимости без GUI и postinstall скриптов.', flush=True)
+    run('npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund',
+        *workspace_args, cwd=maps)
+    # npm install --ignore-scripts skips node-gyp lifecycle hooks; explicitly
+    # build just the C++ bindings the parser uses.
+    run('npm', 'run', 'build', '--workspace', 'packages/clis/parser', cwd=maps)
+
+
+def run_parser_and_graph(maps: Path, game: Path, parser: Path, output_dir: Path):
+    # The upstream parser's UNIX shebang sets an 8 GiB heap; running the
+    # TypeScript entrypoint through npx on Windows bypasses that shebang.
+    os.environ.setdefault('NODE_OPTIONS', '--max-old-space-size=8192')
+    # Use TypeScript entrypoints directly: npm lifecycle scripts that create
+    # .bin/parser and .bin/generator symlinks were intentionally skipped.
+    run('npx', '--no-install', 'tsx', 'packages/clis/parser/index.ts',
+        '-i', game, '-o', parser, cwd=maps)
+    run('npx', '--no-install', 'tsx', 'packages/clis/generator/index.ts',
+        'graph', '-m', 'europe', '-i', parser, '-o', output_dir, '-c', cwd=maps)
+
+
 def main():
     ap=argparse.ArgumentParser(description='Extract ETS2 roads into ETS2 Navigator routepack')
     ap.add_argument('--game-path',default=None,help='Path to Euro Truck Simulator 2 install')
@@ -145,12 +182,10 @@ def main():
         if not (maps/'package.json').is_file():
             raise RuntimeError('Неполный каталог инструментов. Удали его и повтори запуск.')
         check_windows_cpp_toolchain()
-        run('npm','install',cwd=maps)
-        run('npm','run','build','-w','packages/clis/parser',cwd=maps)
+        install_map_tools(maps)
         parser=maps/'out'/'parser';output_dir=maps/'out'
         parser.mkdir(parents=True,exist_ok=True);output_dir.mkdir(parents=True,exist_ok=True)
-        run('npx','parser','-i',game,'-o',parser,cwd=maps)
-        run('npx','generator','graph','-m','europe','-i',parser,'-o',output_dir,'-c',cwd=maps)
+        run_parser_and_graph(maps, game, parser, output_dir)
         pack=make_pack(read_json(parser/'europe-nodes.json'),read_json(parser/'europe-cities.json'),
                        read_json(output_dir/'europe-graph.json'))
         target=args.output.expanduser().resolve();target.parent.mkdir(parents=True,exist_ok=True)
@@ -160,7 +195,9 @@ def main():
         print('Открой https://duumbling.github.io/ets_test/ и выбери этот файл в разделе карты.')
     except (OSError,ValueError,RuntimeError,subprocess.CalledProcessError) as exc:
         print('Ошибка:',exc,file=sys.stderr)
-        print('Проверь установку Git, Node.js 24+ и Visual Studio C++ Build Tools.',file=sys.stderr)
+        print('При ошибке компиляции проверь Visual Studio C++ Build Tools. '
+              'При EPERM проверь, не блокирует ли антивирус или другое приложение '
+              'папку node_modules.',file=sys.stderr)
         sys.exit(1)
 
 
