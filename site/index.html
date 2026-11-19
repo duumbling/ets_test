@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0c131f">
+  <meta name="description" content="ETS2 Navigator — маршруты и телеметрия Euro Truck Simulator 2 на телефоне.">
+  <title>ETS2 Navigator — карта и навигация</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="config.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.1</span></div>
+      <div id="connectionPill" class="connection-pill"><span class="dot"></span><span id="connectionLabel">Не подключено</span></div>
+    </header>
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="eyebrow">СОЕДИНЕНИЕ С ИГРОЙ</div>
+          <h1>Твой маршрут.<br><em>Твой грузовик.</em></h1>
+          <p class="muted">Запусти мост на ПК с ETS2 и введи код сеанса. Ник Steam не нужен.</p>
+          <label for="sessionCode">Код подключения</label>
+          <div class="inline-input"><input id="sessionCode" type="text" autocomplete="off" spellcheck="false" maxlength="14" placeholder="12 символов"><button id="connectBtn" class="primary">Подключить</button></div>
+          <p id="connectionHint" class="hint" aria-live="polite">Маршруты доступны без подключения. Для живых данных потребуется мост и сервер-посредник.</p>
+          <details class="settings"><summary>Настройки сервера</summary><label for="relayUrl">Адрес WebSocket-сервера</label><input id="relayUrl" type="url" spellcheck="false" placeholder="wss://your-worker.workers.dev"><button id="saveRelay" class="secondary small">Сохранить адрес</button></details>
+        </section>
+        <section class="panel route-panel">
+          <div class="panel-heading"><div><div class="eyebrow">ПЛАНИРОВЩИК</div><h2>Маршрут</h2></div><span class="mini-tag">НА КАРТЕ</span></div>
+          <div class="route-input"><span class="point-icon start-icon"></span><div class="field"><label for="startSelect">Откуда</label><select id="startSelect"></select></div></div>
+          <div id="waypoints" class="waypoints"></div>
+          <div class="route-input"><span class="point-icon finish-icon"></span><div class="field"><label for="finishSelect">Куда</label><select id="finishSelect"></select></div></div>
+          <div class="row-buttons"><button id="addWaypoint" class="secondary">+ Добавить точку</button><button id="swapRoute" class="icon-btn" title="Поменять местами начало и конец" aria-label="Поменять местами">⇅</button></div>
+          <div class="route-summary"><span id="routeStats">Маршрут не выбран</span><span id="routeType">Демонстрация</span></div>
+          <button id="copyRoute" class="primary full">Скопировать маршрут</button>
+          <p class="hint">Можно нажимать на города на карте: выбранный город станет пунктом назначения.</p>
+        </section>
+        <section class="panel telemetry-panel"><div class="eyebrow">ПРИБОРЫ</div><div class="telemetry-grid"><div><div class="telemetry-value"><span id="speed">—</span><small>км/ч</small></div><div class="telemetry-label">Скорость</div></div><div><div class="telemetry-value"><span id="coord">—</span></div><div class="telemetry-label">Координаты ETS2</div></div></div><div class="hint" id="liveHint">Ожидаем данные из игры</div></section>
+      </aside>
+      <section class="map-area">
+        <canvas id="mapCanvas" role="img" aria-label="Интерактивная карта городов и маршрутов"></canvas>
+        <div class="map-top"><div><span class="map-kicker">КАРТА ETS2</span><h2 id="mapTitle">Планировщик маршрутов</h2></div><span id="mapState" class="demo-badge">ДЕМО-КАРТА</span></div>
+        <div class="map-bottom"><div class="legend"><span><i class="legend-line"></i> Путь</span><span><i class="legend-dot"></i> Точка маршрута</span></div><div class="map-controls"><button id="zoomIn" aria-label="Приблизить">+</button><button id="zoomOut" aria-label="Отдалить">−</button><button id="resetView" title="Сбросить масштаб">⌖</button></div></div>
+        <div class="map-note" id="mapNotice">Сейчас показан тестовый граф, а не реальные дороги ETS2. Подключение настоящей дорожной сети — следующий этап.</div>
+      </section>
+    </main>
+    <footer><span>Неофициальный проект. Не связан с SCS Software.</span><span>Статический сайт · GitHub Pages · <a href="https://github.com/truckermudgeon/maps" target="_blank" rel="noopener noreferrer">О реальных картах ETS2</a></span></footer>
+  </div>
+</body>
+</html>
