@@ -15,14 +15,14 @@ class SiiPatchTests(unittest.TestCase):
             lexer = folder / "sii-parser.ts"
             convert = folder / "convert-sii-to-json.ts"
             lexer.write_text(
-                "const Comment = createToken({\\n  name: 'Comment',\\n"
-                r"  pattern: /(\\/\\/|#).*/," + "\\n});\\n",
+                "const Comment = createToken({\n  name: 'Comment',\n"
+                r"  pattern: /(\\/\\/|#).*/," + "\n});\n",
                 encoding="utf-8")
             convert.write_text(
-                "if (!res.ok) {\\n"
-                "    throw new Error();\\n"
-                "  }\\n\\n"
-                "  const json = jsonConverter.convert(res.cst);\\n",
+                "if (!res.ok) {\n"
+                "    throw new Error();\n"
+                "  }\n\n"
+                "  const json = jsonConverter.convert(res.cst);\n",
                 encoding="utf-8")
             changed = patch_parser(base)
             self.assertEqual(len(changed), 2)
