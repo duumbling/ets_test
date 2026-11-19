@@ -74,8 +74,19 @@ def require_command(name: str):
 
 
 def run(*args, cwd=None):
-    print('>',' '.join(str(a) for a in args),flush=True)
-    subprocess.run([str(a) for a in args],cwd=cwd,check=True)
+    command = [str(a) for a in args]
+    # On Windows, npm and npx are normally installed as .cmd wrappers.
+    # shutil.which('npm') may report success, but subprocess.run(['npm', ...])
+    # raises WinError 2 because CreateProcess does not resolve npm.cmd.
+    if sys.platform == 'win32' and command[0].lower() in ('npm', 'npx'):
+        program = command[0]
+        command[0] = (shutil.which(program + '.cmd')
+                      or shutil.which(program + '.bat')
+                      or shutil.which(program)
+                      or program + '.cmd')
+    print('>', subprocess.list2cmdline(command) if sys.platform == 'win32'
+          else ' '.join(command), flush=True)
+    subprocess.run(command, cwd=cwd, check=True)
 
 
 def main():
