@@ -45,10 +45,18 @@ npx --no-install tsx packages/clis/parser/index.ts -i "C:\Program Files (x86)\St
 
 Обязательно дождись завершения: нужны файлы `out/parser/europe-nodes.json` и `out/parser/europe-cities.json`. Автор инструмента сообщает, что официальные DLC поддерживаются; сторонние карты, например ProMods, **не поддерживаются**.
 
+**Если парсер карты уже успешно завершился, но генератор упал на `No handler function "default" exported`**, обнови скрипт и запусти из корня `ets_test`:
+
+```cmd
+py tools\\build_real_map.py --graph-only
+```
+
+Этот режим использует уже созданные `out/parser/europe-*.json`, не пересобирает C++ и не читает повторно все 1828 секторов игры. Параметр `-c` (`--check`) в генераторе отключён: он запускает необязательную параллельную проверку маршрутов через `Tinypool`, которая может ломаться на Windows с Node.js 26. Вместо этого наш `create_ets2_routepack.py` проверяет наличие связей, координат и городов. Это **не полная проверка достижимости всех маршрутов**.
+
 **3. Построй направленный дорожный граф.** В той же папке `maps`:
 
 ```powershell
-npx --no-install tsx packages/clis/generator/index.ts graph -m europe -i out/parser -o out -c
+npx --no-install tsx packages/clis/generator/index.ts graph -m europe -i out/parser -o out
 ```
 
 Будет создан `out/europe-graph.json`. Если генератор не установился / не запустился, смотри инструкцию в исходном репозитории. Не переименовывай `nodes` в `roads` и не подменяй игровой граф картой обычных европейских дорог.
