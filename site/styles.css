@@ -7,10 +7,18 @@
 @media(max-width:860px){.layout{display:flex;flex-direction:column-reverse}.map-area{height:50dvh;min-height:340px}.sidebar{border-right:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}.route-panel{grid-row:span 2}.telemetry-panel{margin-top:0}.panel{padding:16px}.map-top{left:18px;top:17px;right:15px}.map-top h2{font-size:19px}.map-bottom{left:16px;right:16px;bottom:15px}.map-note{left:16px;bottom:76px;right:16px;font-size:10px}}
 @media(max-width:600px){.topbar{padding:0 14px;height:58px}.version{display:none}.brand{font-size:12px;gap:8px}.connection-pill{font-size:10px;padding:7px}.sidebar{display:flex;padding:12px}.map-area{min-height:350px;height:45dvh}.map-top h2{font-size:16px}.map-kicker{font-size:9px}.map-note{bottom:71px}.legend{font-size:10px;padding:8px;gap:10px}.map-controls button{width:32px;height:32px}footer{padding:10px 14px;flex-direction:column}}
 
-/* Local network pairing */
+/* Local-network pairing mode */
 .connection-mode,.lan-controls input{width:100%}
 .connection-mode{margin-bottom:14px}
 .lan-controls{margin-bottom:14px}
 .lan-controls .hint{margin:7px 0 0}
 .lan-controls code{overflow-wrap:anywhere;color:#c2ebdf}
 [hidden]{display:none!important}
+
+/* Real ETS2 routepack controls */
+.map-import-panel h2{margin:5px 0 8px}
+.map-import-panel code{overflow-wrap:anywhere}
+.map-import-panel a{color:#74e2c6}
+.map-import-panel input[type=file]{display:block;width:100%;max-width:100%;font:inherit;color:#cbdce5;font-size:12px}
+.map-import-panel input[type=file]::file-selector-button{border:1px solid #4c7786;background:#193543;color:#e2f7f1;padding:9px 11px;border-radius:8px;margin-right:8px;cursor:pointer}
+.map-import-panel .hint{margin-top:8px}
