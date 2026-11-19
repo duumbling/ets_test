@@ -99,7 +99,7 @@ def check_windows_cpp_toolchain():
     """
     if sys.platform != 'win32' or shutil.which('cl.exe'):
         return
-    installer_root = Path(os.environ.get('ProgramFiles(x86)', r'C:\\Program Files (x86)'))
+    installer_root = Path(os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'))
     vswhere = installer_root / 'Microsoft Visual Studio' / 'Installer' / 'vswhere.exe'
     if not vswhere.is_file():
         print('ВНИМАНИЕ: MSVC пока не обнаружен через vswhere. '
