@@ -6,7 +6,9 @@
     start: 'berlin', end: 'paris', via: [], route: [],
     zoom: 1, panX: 0, panY: 0, width: 0, height: 0, dpr: 1,
     dragging: false, dragFrom: null, moved: false, pointer: null, live: null,
-    ws: null, relayUrl: localStorage.getItem('ets2-relay-url') || (window.ETS2_NAV_CONFIG?.relayUrl || '')
+    ws: null, connectionMode: localStorage.getItem('ets2-mode') || 'lan',
+    lanUrl: localStorage.getItem('ets2-lan-url') || 'ws://127.0.0.1:8765',
+    relayUrl: localStorage.getItem('ets2-relay-url') || (window.ETS2_NAV_CONFIG?.relayUrl || '')
   };
   const canvas = $('mapCanvas'), ctx = canvas.getContext('2d');
   const CODE_RE = /^[A-HJ-NP-Z2-9]{12}$/;
@@ -137,13 +139,43 @@
     S.panY=cy-S.height/2-(cy-S.height/2-S.panY)*k;
     S.zoom=newZoom;render(); }
 
+  function isAllowedLanUrl(raw) {
+    try {
+      const url = new URL(raw);
+      if (url.protocol !== 'ws:' || url.username || url.password || url.hash || url.search ||
+          (url.pathname !== '/' && url.pathname !== '')) return false;
+      const h = url.hostname.toLowerCase().replace(/\.$/, '');
+      if (h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.local')) return true;
+      const pieces = h.split('.');
+      if (pieces.length !== 4 || pieces.some(n => !/^\d{1,3}$/.test(n) || +n > 255)) return false;
+      const [a, b] = pieces.map(Number);
+      return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+    } catch {return false;}
+  }
+  function setConnectionMode() {
+    S.connectionMode = $('connectionMode').value;
+    localStorage.setItem('ets2-mode', S.connectionMode);
+    $('lanControls').hidden = S.connectionMode !== 'lan';
+    $('relaySettings').hidden = S.connectionMode !== 'relay';
+    status('Не подключено', false,
+      S.connectionMode === 'lan'
+        ? 'Запусти на ПК: py client/lan_bridge.py. Введи адрес из программы и код сеанса.'
+        : 'Для доступа через интернет нужен твой сервер Cloudflare Worker и код программы-моста.');
+    disconnect();
+  }
   function disconnect(){if(S.ws){const old=S.ws;S.ws=null;old.onclose=null;old.close();}}
   function connect(){
     disconnect();
     const code=$('sessionCode').value.toUpperCase().replace(/\s/g,'');$('sessionCode').value=code;
-    const url=($('relayUrl').value||S.relayUrl).trim();
+    const isLan=S.connectionMode==='lan';
+    const url=(isLan?$('lanUrl').value:($('relayUrl').value||S.relayUrl)).trim().replace(/\/$/,'');
     if(!CODE_RE.test(code)){status('Неверный код',false,'Введите 12 символов, которые показывает программа-мост на ПК.');return;}
-    if(!url.startsWith('wss://')){status('Нет сервера',false,'Сначала укажите wss://-адрес своего сервера в настройках.');return;}
+    if(isLan ? !isAllowedLanUrl(url) : !url.startsWith('wss://')){
+      status('Неверный адрес',false,isLan
+        ? 'Укажите локальный ws://IP:ПОРТ (например, ws://192.168.1.20:8765).'
+        : 'Сначала укажите wss://-адрес своего Cloudflare Worker.');return;
+    }
+    if(isLan){S.lanUrl=url;localStorage.setItem('ets2-lan-url',url);}
     status('Подключаемся…',false);
     let ws;
     try {ws=new WebSocket(`${url.replace(/\/$/,'')}/ws?role=viewer&code=${encodeURIComponent(code)}`);}catch(e){status('Ошибка адреса',false,String(e));return;}
@@ -159,12 +191,19 @@
         status('Игра подключена',true);render();
       }
     };
-    ws.onerror=()=>{if(S.ws===ws)status('Ошибка соединения',false,'Проверьте адрес Cloudflare Worker и доступность сети.');};
-    ws.onclose=()=>{if(S.ws===ws)status('Отключено',false,'Соединение прервано. Подключитесь снова.');};
+    let hadError=false;
+    ws.onerror=()=>{if(S.ws===ws){hadError=true;status('Ошибка соединения',false,isLan
+      ? 'Проверь мост, IP, брандмауэр Windows и разрешение браузера на локальную сеть.'
+      : 'Проверь адрес Cloudflare Worker и доступность сети.');}};
+    ws.onclose=()=>{if(S.ws===ws&&!hadError)status('Отключено',false,'Соединение прервано. Подключитесь снова.');};
   }
 
   async function init(){
     $('relayUrl').value=S.relayUrl;
+    $('lanUrl').value=S.lanUrl;
+    $('connectionMode').value=S.connectionMode==='relay'?'relay':'lan';
+    S.connectionMode=$('connectionMode').value;
+    setConnectionMode();
     try{
       const resp=await fetch('./data/map.json');if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
       S.graph=await resp.json();
@@ -196,6 +235,7 @@
     catch{window.prompt('Скопируйте JSON маршрута:',output);}
     setTimeout(()=>$('copyRoute').textContent='Скопировать маршрут',1500);
   });
+  $('connectionMode').addEventListener('change',setConnectionMode);
   $('connectBtn').addEventListener('click',connect);
   $('sessionCode').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
   $('saveRelay').addEventListener('click',()=>{const v=$('relayUrl').value.trim().replace(/\/$/,'');if(v&&!v.startsWith('wss://')){status('Неверный адрес',false,'Сервер должен начинаться с wss://');return;}S.relayUrl=v;localStorage.setItem('ets2-relay-url',v);status('Адрес сохранён',false,'Теперь можно вводить код подключения.');});
