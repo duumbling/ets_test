@@ -89,6 +89,40 @@ def run(*args, cwd=None):
     subprocess.run(command, cwd=cwd, check=True)
 
 
+
+def check_windows_cpp_toolchain():
+    """Check for MSVC before a costly npm install/native-addon rebuild.
+
+    vswhere is shipped with modern Visual Studio / Build Tools. If it is
+    absent, let node-gyp attempt its usual discovery rather than rejecting
+    nonstandard installations.
+    """
+    if sys.platform != 'win32' or shutil.which('cl.exe'):
+        return
+    installer_root = Path(os.environ.get('ProgramFiles(x86)', r'C:\\Program Files (x86)'))
+    vswhere = installer_root / 'Microsoft Visual Studio' / 'Installer' / 'vswhere.exe'
+    if not vswhere.is_file():
+        print('ВНИМАНИЕ: MSVC пока не обнаружен через vswhere. '
+              'Если npm выдаст "Could not find any Visual Studio installation", '
+              'установи Build Tools с компонентом Desktop development with C++.', file=sys.stderr)
+        return
+    try:
+        location = subprocess.check_output([
+            str(vswhere), '-latest', '-products', '*',
+            '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
+            '-property', 'installationPath',
+        ], text=True, stderr=subprocess.DEVNULL).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return
+    if not location:
+        raise RuntimeError(
+            'Не найдены Microsoft Visual C++ Build Tools (MSVC x64/x86). '
+            'Установи Build Tools for Visual Studio и workload '
+            '"Desktop development with C++" с Windows SDK: '
+            'https://visualstudio.microsoft.com/downloads/ . '
+            'После установки открой новый терминал и повтори команду.'
+        )
+
 def main():
     ap=argparse.ArgumentParser(description='Extract ETS2 roads into ETS2 Navigator routepack')
     ap.add_argument('--game-path',default=None,help='Path to Euro Truck Simulator 2 install')
@@ -110,6 +144,7 @@ def main():
             run('git','clone','--recurse-submodules',SOURCE,maps)
         if not (maps/'package.json').is_file():
             raise RuntimeError('Неполный каталог инструментов. Удали его и повтори запуск.')
+        check_windows_cpp_toolchain()
         run('npm','install',cwd=maps)
         run('npm','run','build','-w','packages/clis/parser',cwd=maps)
         parser=maps/'out'/'parser';output_dir=maps/'out'
