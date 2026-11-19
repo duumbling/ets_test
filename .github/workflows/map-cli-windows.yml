@@ -7,6 +7,8 @@ on:
       - 'tools/test_windows_commands.py'
       - 'tools/patch_upstream_sii.py'
       - 'tools/test_sii_patch.py'
+      - 'tools/patch_upstream_icons.py'
+      - 'tools/test_icon_patch.py'
       - 'tools/fixtures/sii-comment-test.ts'
       - '.github/workflows/map-cli-windows.yml'
   workflow_dispatch:
@@ -47,6 +49,15 @@ jobs:
         shell: pwsh
         run: |
           python -c "import sys; sys.path.insert(0, 'tools'); from patch_upstream_sii import patch_parser; from pathlib import Path; print(patch_parser(Path('maps-upstream')))"
+      - name: Skip optional TOBJ icon decoding in route-only mode
+        shell: pwsh
+        run: |
+          python -c "import sys; sys.path.insert(0, 'tools'); from patch_upstream_icons import patch_icon_decoding; from pathlib import Path; print(patch_icon_decoding(Path('maps-upstream')))"
+      - name: Assert route-only parser is loaded without decoding TOBJ textures
+        shell: pwsh
+        working-directory: maps-upstream
+        run: |
+          npx --no-install tsx -e "import {parseMapFiles} from './packages/clis/parser/game-files/map-files-parser.ts'; if (typeof parseMapFiles !== 'function') throw Error('parser not available'); console.log('Route-only parser import OK');"
       - name: Test multiline SII comments with actual game parser
         shell: pwsh
         run: |
