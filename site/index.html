@@ -21,11 +21,21 @@
         <section class="panel">
           <div class="eyebrow">СОЕДИНЕНИЕ С ИГРОЙ</div>
           <h1>Твой маршрут.<br><em>Твой грузовик.</em></h1>
-          <p class="muted">Запусти мост на ПК с ETS2 и введи код сеанса. Ник Steam не нужен.</p>
+          <p class="muted">Запусти мост на ПК с ETS2 и введи код сеанса. Steam не нужен. Локальный режим работает без Cloudflare.</p>
+          <label for="connectionMode">Режим подключения</label>
+          <select id="connectionMode" class="connection-mode" aria-label="Режим подключения">
+            <option value="lan">Локальная сеть — без облака</option>
+            <option value="relay">Через интернет — Cloudflare Worker</option>
+          </select>
+          <div id="lanControls" class="lan-controls">
+            <label for="lanUrl">Адрес компьютера с ETS2</label>
+            <input id="lanUrl" type="text" autocomplete="off" spellcheck="false" placeholder="ws://127.0.0.1:8765">
+            <p class="hint">На том же ПК: <code>ws://127.0.0.1:8765</code>. На телефоне введи IP из программы-моста. Нужна одна Wi-Fi сеть и разрешение браузера на локальную сеть.</p>
+          </div>
           <label for="sessionCode">Код подключения</label>
           <div class="inline-input"><input id="sessionCode" type="text" autocomplete="off" spellcheck="false" maxlength="14" placeholder="12 символов"><button id="connectBtn" class="primary">Подключить</button></div>
           <p id="connectionHint" class="hint" aria-live="polite">Маршруты доступны без подключения. Для живых данных потребуется мост и сервер-посредник.</p>
-          <details class="settings"><summary>Настройки сервера</summary><label for="relayUrl">Адрес WebSocket-сервера</label><input id="relayUrl" type="url" spellcheck="false" placeholder="wss://your-worker.workers.dev"><button id="saveRelay" class="secondary small">Сохранить адрес</button></details>
+          <details class="settings" id="relaySettings" hidden><summary>Настройки интернет-сервера</summary><label for="relayUrl">Адрес WebSocket-сервера</label><input id="relayUrl" type="url" spellcheck="false" placeholder="wss://your-worker.workers.dev"><button id="saveRelay" class="secondary small">Сохранить адрес</button></details>
         </section>
         <section class="panel route-panel">
           <div class="panel-heading"><div><div class="eyebrow">ПЛАНИРОВЩИК</div><h2>Маршрут</h2></div><span class="mini-tag">НА КАРТЕ</span></div>
