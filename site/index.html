@@ -8,12 +8,13 @@
   <title>ETS2 Navigator — карта и навигация</title>
   <link rel="stylesheet" href="styles.css">
   <script defer src="config.js"></script>
+  <script defer src="routepack.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.1</span></div>
+      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.3</span></div>
       <div id="connectionPill" class="connection-pill"><span class="dot"></span><span id="connectionLabel">Не подключено</span></div>
     </header>
     <main class="layout">
@@ -30,12 +31,21 @@
           <div id="lanControls" class="lan-controls">
             <label for="lanUrl">Адрес компьютера с ETS2</label>
             <input id="lanUrl" type="text" autocomplete="off" spellcheck="false" placeholder="ws://127.0.0.1:8765">
-            <p class="hint">На том же ПК: <code>ws://127.0.0.1:8765</code>. На телефоне введи IP из программы-моста. Нужна одна Wi-Fi сеть и разрешение браузера на локальную сеть.</p>
+            <p class="hint">На том же ПК: <code>ws://127.0.0.1:8765</code>. На телефоне используй IP компьютера из программы-моста. Требуется одна Wi-Fi сеть и разрешение браузера на локальную сеть.</p>
           </div>
           <label for="sessionCode">Код подключения</label>
           <div class="inline-input"><input id="sessionCode" type="text" autocomplete="off" spellcheck="false" maxlength="14" placeholder="12 символов"><button id="connectBtn" class="primary">Подключить</button></div>
           <p id="connectionHint" class="hint" aria-live="polite">Маршруты доступны без подключения. Для живых данных потребуется мост и сервер-посредник.</p>
           <details class="settings" id="relaySettings" hidden><summary>Настройки интернет-сервера</summary><label for="relayUrl">Адрес WebSocket-сервера</label><input id="relayUrl" type="url" spellcheck="false" placeholder="wss://your-worker.workers.dev"><button id="saveRelay" class="secondary small">Сохранить адрес</button></details>
+        </section>
+        <section class="panel map-import-panel">
+          <div class="eyebrow">КАРТА ETS2</div>
+          <h2>Настоящие дороги</h2>
+          <p class="muted">Загрузи <code>ets2-routepack.json</code> из файлов своей игры. Обработка идёт в браузере, без отправки карты на сервер.</p>
+          <label for="mapFile" class="file-label">Открыть файл карты</label>
+          <input id="mapFile" type="file" accept=".json,application/json">
+          <p id="mapImportStatus" class="hint" aria-live="polite">Сейчас используется демонстрационная схема.</p>
+          <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/REAL_MAP.md" target="_blank" rel="noopener noreferrer">Как создать файл из ETS2</a></p>
         </section>
         <section class="panel route-panel">
           <div class="panel-heading"><div><div class="eyebrow">ПЛАНИРОВЩИК</div><h2>Маршрут</h2></div><span class="mini-tag">НА КАРТЕ</span></div>
