@@ -140,7 +140,7 @@ MAP_WORKSPACES = (
 def install_map_tools(maps: Path):
     workspace_args = [item for workspace in MAP_WORKSPACES
                       for item in ('--workspace', workspace)]
-    print('Устанавливаю CLI-зависимости без GUI и postinstall скриптов.', flush=True)
+    print('Installing map CLI dependencies without GUI postinstall scripts.', flush=True)
     run('npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund',
         *workspace_args, cwd=maps)
     # npm install --ignore-scripts skips node-gyp lifecycle hooks; explicitly
