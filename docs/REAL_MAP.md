@@ -17,7 +17,7 @@ py tools/build_real_map.py
 py tools/build_real_map.py --game-path "D:\SteamLibrary\steamapps\common\Euro Truck Simulator 2"
 ```
 
-**Перед запуском:** утилита скачивает сторонний проект и вызывает `npm install` (могут выполняться скрипты зависимостей). При желании изучи исходники и лицензии до установки. Программа **не** загружает игровые файлы на внешние серверы и не публикует сформированный JSON. Сборку на твоём игровом ПК я не проверял — локально проверены функции поиска папки и конвертации тестовых данных.
+**Перед запуском:** утилита скачивает сторонний проект и вызывает `npm install --ignore-scripts` только для CLI-пакетов (без запуска `postinstall` GUI с ошибкой `EPERM: symlink`), затем отдельно компилирует C++-парсер. При желании изучи исходники и лицензии до установки. Программа **не** загружает игровые файлы на внешние серверы и не публикует сформированный JSON. Сборку на твоём игровом ПК я не проверял — локально проверены функции поиска папки и конвертации тестовых данных.
 
 Если автоматическая команда не сработает, ниже приведён ручной путь с подробной диагностикой.
 
@@ -30,14 +30,14 @@ py tools/build_real_map.py --game-path "D:\SteamLibrary\steamapps\common\Euro Tr
 ```powershell
 git clone --recurse-submodules https://github.com/truckermudgeon/maps.git
 cd maps
-npm install
-npm run build -w packages/clis/parser
+npm install --ignore-scripts --no-audit --no-fund --workspace packages/clis/parser --workspace packages/clis/generator --workspace packages/libs/base --workspace packages/libs/io --workspace packages/libs/map
+npm run build --workspace packages/clis/parser
 ```
 
 **2. Сгенерируй JSON из своей установки ETS2.** Замени путь на свой:
 
 ```powershell
-npx parser -i "C:\Program Files (x86)\Steam\steamapps\common\Euro Truck Simulator 2" -o out/parser
+npx --no-install tsx packages/clis/parser/index.ts -i "C:\Program Files (x86)\Steam\steamapps\common\Euro Truck Simulator 2" -o out/parser
 ```
 
 Обязательно дождись завершения: нужны файлы `out/parser/europe-nodes.json` и `out/parser/europe-cities.json`. Автор инструмента сообщает, что официальные DLC поддерживаются; сторонние карты, например ProMods, **не поддерживаются**.
@@ -45,7 +45,7 @@ npx parser -i "C:\Program Files (x86)\Steam\steamapps\common\Euro Truck Simulato
 **3. Построй направленный дорожный граф.** В той же папке `maps`:
 
 ```powershell
-npx generator graph -m europe -i out/parser -o out -c
+npx --no-install tsx packages/clis/generator/index.ts graph -m europe -i out/parser -o out -c
 ```
 
 Будет создан `out/europe-graph.json`. Если генератор не установился / не запустился, смотри инструкцию в исходном репозитории. Не переименовывай `nodes` в `roads` и не подменяй игровой граф картой обычных европейских дорог.
