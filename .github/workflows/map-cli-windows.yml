@@ -5,6 +5,9 @@ on:
     paths:
       - 'tools/build_real_map.py'
       - 'tools/test_windows_commands.py'
+      - 'tools/patch_upstream_sii.py'
+      - 'tools/test_sii_patch.py'
+      - 'tools/fixtures/sii-comment-test.ts'
       - '.github/workflows/map-cli-windows.yml'
   workflow_dispatch:
 
@@ -40,6 +43,16 @@ jobs:
         shell: pwsh
         working-directory: maps-upstream
         run: npm run build --workspace packages/clis/parser
+      - name: Apply local SII lexer compatibility patch
+        shell: pwsh
+        run: |
+          python -c "import sys; sys.path.insert(0, 'tools'); from patch_upstream_sii import patch_parser; from pathlib import Path; print(patch_parser(Path('maps-upstream')))"
+      - name: Test multiline SII comments with actual game parser
+        shell: pwsh
+        run: |
+          Copy-Item tools/fixtures/sii-comment-test.ts maps-upstream/sii-comment-test.ts
+          Push-Location maps-upstream
+          try { npx --no-install tsx sii-comment-test.ts; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } finally { Pop-Location }
       - name: Check CLI commands without ETS2 installation
         shell: pwsh
         working-directory: maps-upstream
