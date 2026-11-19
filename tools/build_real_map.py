@@ -150,16 +150,33 @@ def install_map_tools(maps: Path):
     run('npm', 'run', 'build', '--workspace', 'packages/clis/parser', cwd=maps)
 
 
-def run_parser_and_graph(maps: Path, game: Path, parser: Path, output_dir: Path):
+def run_parser_and_graph(maps: Path, game: Path, parser: Path, output_dir: Path,
+                         *, graph_only: bool = False):
     # The upstream parser's UNIX shebang sets an 8 GiB heap; running the
     # TypeScript entrypoint through npx on Windows bypasses that shebang.
     os.environ.setdefault('NODE_OPTIONS', '--max-old-space-size=8192')
     # Use TypeScript entrypoints directly: npm lifecycle scripts that create
     # .bin/parser and .bin/generator symlinks were intentionally skipped.
-    run('npx', '--no-install', 'tsx', 'packages/clis/parser/index.ts',
-        '-i', game, '-o', parser, cwd=maps)
+    if graph_only:
+        missing = [name for name in ('europe-nodes.json', 'europe-cities.json')
+                   if not (parser / name).is_file()]
+        if missing:
+            raise RuntimeError(
+                'No completed ETS2 parser output found (missing: ' +
+                ', '.join(missing) + '). Run without --graph-only first.'
+            )
+        print('Reusing previously parsed ETS2 road data; skipping game extraction.', flush=True)
+    else:
+        run('npx', '--no-install', 'tsx', 'packages/clis/parser/index.ts',
+            '-i', game, '-o', parser, cwd=maps)
+
+    # Do NOT pass -c/--check. The optional upstream route verifier uses
+    # Tinypool and its find-route-worker-wrapper.js can fail with
+    # "No handler function default exported" on Windows/Node 26.
+    # The generator produces europe-graph.json without the optional verifier;
+    # make_pack() below validates that the result has usable directed links.
     run('npx', '--no-install', 'tsx', 'packages/clis/generator/index.ts',
-        'graph', '-m', 'europe', '-i', parser, '-o', output_dir, '-c', cwd=maps)
+        'graph', '-m', 'europe', '-i', parser, '-o', output_dir, cwd=maps)
 
 
 def main():
@@ -167,6 +184,8 @@ def main():
     ap.add_argument('--game-path',default=None,help='Path to Euro Truck Simulator 2 install')
     ap.add_argument('--toolchain-dir',type=Path,default=None,help='Where to clone truckermudgeon/maps')
     ap.add_argument('--output',type=Path,default=Path.home()/'Downloads'/'ets2-routepack.json')
+    ap.add_argument('--graph-only',action='store_true',
+                    help='Reuse existing out/parser/*.json, skip npm install and ETS2 re-parsing')
     args=ap.parse_args()
     try:
         require_command('git');require_command('node');require_command('npm');require_command('npx')
@@ -183,22 +202,26 @@ def main():
             run('git','clone','--recurse-submodules',SOURCE,maps)
         if not (maps/'package.json').is_file():
             raise RuntimeError('Неполный каталог инструментов. Удали его и повтори запуск.')
-        check_windows_cpp_toolchain()
-        install_map_tools(maps)
-        updated_sources = patch_parser(maps)
-        if updated_sources:
-            print('Applied local SII parser compatibility fixes:', *updated_sources,
-                  sep='\\n  ', flush=True)
+        if args.graph_only:
+            if not (maps/'node_modules'/'tsx').exists():
+                raise RuntimeError('Dependencies not installed. Run without --graph-only first.')
         else:
-            print('Local SII compatibility patch is already in place.', flush=True)
-        icon_patches = patch_icon_decoding(maps)
-        if icon_patches:
-            print('Enabled ETS2 Navigator route-only parsing (skip TOBJ images).', flush=True)
-        else:
-            print('ETS2 Navigator route-only parsing is already enabled.', flush=True)
+            check_windows_cpp_toolchain()
+            install_map_tools(maps)
+            updated_sources = patch_parser(maps)
+            if updated_sources:
+                print('Applied local SII parser compatibility fixes:', *updated_sources,
+                      sep='\\n  ', flush=True)
+            else:
+                print('Local SII compatibility patch is already in place.', flush=True)
+            icon_patches = patch_icon_decoding(maps)
+            if icon_patches:
+                print('Enabled ETS2 Navigator route-only parsing (skip TOBJ images).', flush=True)
+            else:
+                print('ETS2 Navigator route-only parsing is already enabled.', flush=True)
         parser=maps/'out'/'parser';output_dir=maps/'out'
         parser.mkdir(parents=True,exist_ok=True);output_dir.mkdir(parents=True,exist_ok=True)
-        run_parser_and_graph(maps, game, parser, output_dir)
+        run_parser_and_graph(maps, game, parser, output_dir, graph_only=args.graph_only)
         pack=make_pack(read_json(parser/'europe-nodes.json'),read_json(parser/'europe-cities.json'),
                        read_json(output_dir/'europe-graph.json'))
         target=args.output.expanduser().resolve();target.parent.mkdir(parents=True,exist_ok=True)
