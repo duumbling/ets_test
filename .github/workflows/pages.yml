@@ -18,6 +18,19 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify JS syntax and route algorithm
+        run: |
+          node --check site/app.js
+          node --check site/routepack.js
+          node tools/test_routepack.js
+      - name: Verify map conversion
+        run: python -m unittest discover -s tools -p 'test_*.py' -v
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
