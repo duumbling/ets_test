@@ -20,6 +20,7 @@ import sys
 
 from create_ets2_routepack import read_json, make_pack
 from patch_upstream_sii import patch_parser
+from patch_upstream_icons import patch_icon_decoding
 import json
 
 SOURCE = 'https://github.com/truckermudgeon/maps.git'
@@ -190,6 +191,11 @@ def main():
                   sep='\\n  ', flush=True)
         else:
             print('Local SII compatibility patch is already in place.', flush=True)
+        icon_patches = patch_icon_decoding(maps)
+        if icon_patches:
+            print('Enabled ETS2 Navigator route-only parsing (skip TOBJ images).', flush=True)
+        else:
+            print('ETS2 Navigator route-only parsing is already enabled.', flush=True)
         parser=maps/'out'/'parser';output_dir=maps/'out'
         parser.mkdir(parents=True,exist_ok=True);output_dir.mkdir(parents=True,exist_ok=True)
         run_parser_and_graph(maps, game, parser, output_dir)
