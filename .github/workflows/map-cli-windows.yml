@@ -1,0 +1,48 @@
+name: Verify map builder dependencies on Windows
+
+on:
+  push:
+    paths:
+      - 'tools/build_real_map.py'
+      - 'tools/test_windows_commands.py'
+      - '.github/workflows/map-cli-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  map-cli:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout navigator tools
+        uses: actions/checkout@v4
+      - name: Install Node.js 26
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Verify Python unit tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Verify navigator command generation
+        run: python -m unittest discover -s tools -p 'test_*.py' -v
+      - name: Clone map parser with submodules
+        shell: pwsh
+        run: git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/truckermudgeon/maps.git maps-upstream
+      - name: Install CLI-only dependencies (no postinstall symlinks)
+        shell: pwsh
+        working-directory: maps-upstream
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --workspace packages/clis/parser --workspace packages/clis/generator --workspace packages/libs/base --workspace packages/libs/io --workspace packages/libs/map
+      - name: Compile native map parser
+        shell: pwsh
+        working-directory: maps-upstream
+        run: npm run build --workspace packages/clis/parser
+      - name: Check CLI commands without ETS2 installation
+        shell: pwsh
+        working-directory: maps-upstream
+        run: |
+          npx --no-install tsx packages/clis/parser/index.ts --help
+          npx --no-install tsx packages/clis/generator/index.ts --help
