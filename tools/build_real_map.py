@@ -19,6 +19,7 @@ import subprocess
 import sys
 
 from create_ets2_routepack import read_json, make_pack
+from patch_upstream_sii import patch_parser
 import json
 
 SOURCE = 'https://github.com/truckermudgeon/maps.git'
@@ -183,6 +184,12 @@ def main():
             raise RuntimeError('Неполный каталог инструментов. Удали его и повтори запуск.')
         check_windows_cpp_toolchain()
         install_map_tools(maps)
+        updated_sources = patch_parser(maps)
+        if updated_sources:
+            print('Applied local SII parser compatibility fixes:', *updated_sources,
+                  sep='\\n  ', flush=True)
+        else:
+            print('Local SII compatibility patch is already in place.', flush=True)
         parser=maps/'out'/'parser';output_dir=maps/'out'
         parser.mkdir(parents=True,exist_ok=True);output_dir.mkdir(parents=True,exist_ok=True)
         run_parser_and_graph(maps, game, parser, output_dir)
