@@ -16,7 +16,7 @@ class SiiPatchTests(unittest.TestCase):
             convert = folder / "convert-sii-to-json.ts"
             lexer.write_text(
                 "const Comment = createToken({\n  name: 'Comment',\n"
-                r"  pattern: /(\\/\\/|#).*/," + "\n});\n",
+                r"  pattern: /(\/\/|#).*/," + "\n});\n",
                 encoding="utf-8")
             convert.write_text(
                 "if (!res.ok) {\n"
@@ -27,7 +27,7 @@ class SiiPatchTests(unittest.TestCase):
             changed = patch_parser(base)
             self.assertEqual(len(changed), 2)
             source = lexer.read_text(encoding="utf-8")
-            self.assertIn(r"[\\s\\S]*?", source)
+            self.assertIn(r"[\s\S]*?", source)
             self.assertIn("ETS2 NAV: cannot parse SII file", convert.read_text(encoding="utf-8"))
             self.assertEqual(patch_parser(base), [])
             self.assertEqual(source, lexer.read_text(encoding="utf-8"))
