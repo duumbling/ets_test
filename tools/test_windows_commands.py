@@ -27,5 +27,39 @@ class WindowsLauncherTests(unittest.TestCase):
                     )
 
 
+class MapCliInstallTests(unittest.TestCase):
+    def test_install_skips_postinstall_and_gui_workspaces(self):
+        from pathlib import Path
+
+        with patch.object(build_real_map, 'run') as runner:
+            build_real_map.install_map_tools(Path('maps'))
+
+        install_args = runner.call_args_list[0].args
+        self.assertEqual(install_args[:5], (
+            'npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund'))
+        self.assertNotIn('packages/guis/navigator', install_args)
+        self.assertIn('packages/clis/parser', install_args)
+        self.assertIn('packages/clis/generator', install_args)
+        self.assertEqual(runner.call_args_list[1].args[:4],
+                         ('npm', 'run', 'build', '--workspace'))
+
+    def test_uses_typescript_entrypoints_without_postinstall_symlinks(self):
+        from pathlib import Path
+
+        with patch.object(build_real_map, 'run') as runner:
+            with patch.dict(build_real_map.os.environ, {}, clear=False):
+                build_real_map.run_parser_and_graph(
+                    Path('maps'), Path('game'), Path('maps/out/parser'),
+                    Path('maps/out'))
+
+        self.assertEqual(runner.call_count, 2)
+        self.assertEqual(runner.call_args_list[0].args[:4],
+                         ('npx', '--no-install', 'tsx',
+                          'packages/clis/parser/index.ts'))
+        self.assertEqual(runner.call_args_list[1].args[:4],
+                         ('npx', '--no-install', 'tsx',
+                          'packages/clis/generator/index.ts'))
+
+
 if __name__ == '__main__':
     unittest.main()
