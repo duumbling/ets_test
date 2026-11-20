@@ -191,25 +191,32 @@ def main():
                     help='Reuse existing out/parser/*.json, skip npm install and ETS2 re-parsing')
     ap.add_argument('--base-only',action='store_true',
                     help='Export base ETS2 only, ignore all DLC archives (does not include mods)')
+    ap.add_argument('--repack-only',action='store_true',
+                    help='Refresh routepack from cached graph and parser JSON (including POIs), without npm or reading the game')
     args=ap.parse_args()
-    if args.graph_only and args.base_only:
-        ap.error('--graph-only cannot be combined with --base-only: the existing cache may include DLC.')
+    if args.base_only and (args.graph_only or args.repack_only):
+        ap.error('--base-only requires a fresh parse; do not combine with --graph-only or --repack-only.')
+    if args.graph_only and args.repack_only:
+        ap.error('Choose only one of --graph-only and --repack-only.')
     try:
-        require_command('git');require_command('node');require_command('npm');require_command('npx')
-        node_version=subprocess.check_output(['node','-v'],text=True).strip()
-        major=int(re.search(r'v?(\d+)',node_version).group(1))
-        if major<24:raise RuntimeError(f'Нужен Node.js 24+, установлен {node_version}.')
-        game=find_game(args.game_path)
+        if not args.repack_only:
+            require_command('git');require_command('node');require_command('npm');require_command('npx')
+            node_version=subprocess.check_output(['node','-v'],text=True).strip()
+            major=int(re.search(r'v?(\d+)',node_version).group(1))
+            if major<24:raise RuntimeError(f'Нужен Node.js 24+, установлен {node_version}.')
+        game = None if args.repack_only else find_game(args.game_path)
         maps=(args.toolchain_dir or Path.home()/'ETS2NavigatorTools'/'maps').expanduser().resolve()
         print('Игра:',game)
         print('Инструментарий:',maps)
         print('Будет скачан и выполнен открытый сторонний проект truckermudgeon/maps (GPL-3.0).')
-        if not (maps/'.git').exists():
+        if not args.repack_only and not (maps/'.git').exists():
             maps.parent.mkdir(parents=True,exist_ok=True)
             run('git','clone','--recurse-submodules',SOURCE,maps)
         if not (maps/'package.json').is_file():
             raise RuntimeError('Неполный каталог инструментов. Удали его и повтори запуск.')
-        if args.graph_only:
+        if args.repack_only:
+            print('Repacking already extracted map JSON (no game parsing / npm).', flush=True)
+        elif args.graph_only:
             if not (maps/'node_modules'/'tsx').exists():
                 raise RuntimeError('Dependencies not installed. Run without --graph-only first.')
         else:
@@ -228,18 +235,25 @@ def main():
                 print('ETS2 Navigator route-only parsing is already enabled.', flush=True)
         parser=maps/'out'/'parser';output_dir=maps/'out'
         parser.mkdir(parents=True,exist_ok=True);output_dir.mkdir(parents=True,exist_ok=True)
-        run_parser_and_graph(maps, game, parser, output_dir,
-                             graph_only=args.graph_only, base_only=args.base_only)
+        if not args.repack_only:
+            run_parser_and_graph(maps, game, parser, output_dir,
+                                 graph_only=args.graph_only, base_only=args.base_only)
+        poi_file = parser/'europe-pois.json'
+        if not poi_file.is_file():
+            raise RuntimeError(
+                'No europe-pois.json found in parser cache. Re-run full extraction '
+                'with py tools/build_real_map.py to include fuel and service locations.'
+            )
         pack=make_pack(read_json(parser/'europe-nodes.json'),read_json(parser/'europe-cities.json'),
-                       read_json(output_dir/'europe-graph.json'))
+                       read_json(output_dir/'europe-graph.json'),read_json(poi_file))
         pack['buildProfile']='base-only' if args.base_only else 'installed-game-archives'
         pack['title']='ETS2 — базовая карта (без DLC)' if args.base_only else 'ETS2 — установленные игровые архивы'
-        pack['installedDlcArchives']=([] if args.base_only else sorted(p.name for p in game.glob('dlc_*.scs')))
+        pack['installedDlcArchives']=([] if args.base_only else sorted(p.name for p in game.glob('dlc_*.scs'))) if game else []
         pack['mapModsIncluded']=False
         target=args.output.expanduser().resolve();target.parent.mkdir(parents=True,exist_ok=True)
         target.write_text(json.dumps(pack,separators=(',',':'),ensure_ascii=False),encoding='utf-8')
         print(f'ГОТОВО: {target}')
-        print(f"{len(pack['cities'])} городов · {len(pack['points'])} узлов · {len(pack['links'])} связей")
+        print(f"{len(pack['cities'])} городов · {len(pack['points'])} узлов · {len(pack['links'])} связей · {len(pack['pois'])} POI")
         print('Открой https://duumbling.github.io/ets_test/ и выбери этот файл в разделе карты.')
     except (OSError,ValueError,RuntimeError,subprocess.CalledProcessError) as exc:
         print('Ошибка:',exc,file=sys.stderr)
