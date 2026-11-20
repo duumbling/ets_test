@@ -82,7 +82,7 @@ const EXT={x1:-113177.305,x2:97925.63,y1:-122648.086,y2:88454.85};
 const SIZE=256;
 if(!window.L){$('status').textContent='Не загрузилась библиотека Leaflet. Проверь соединение с интернетом.';return;}
 const bounds=L.latLngBounds([[-SIZE,0],[0,SIZE]]);
-const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:14,zoomControl:false,attributionControl:true,zoomSnap:1,zoomDelta:1,worldCopyJump:false});
+const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:20,zoomControl:false,attributionControl:true,zoomSnap:1,zoomDelta:1,worldCopyJump:false});
 L.control.zoom({position:'bottomright'}).addTo(map);
 map.attributionControl.setPrefix(false);
 map.attributionControl.addAttribution('© SCS Software · ETS2 Map Toolkit');
@@ -92,7 +92,7 @@ function tileUrl(layer){return (usingMirror?MIRROR:REPO)+layer+'/{z}/{x}/{y}.png
 function setLayer(layer){
  errors=0;loaded=0;
  if(tiles)map.removeLayer(tiles);
- tiles=L.tileLayer(tileUrl(layer),{minZoom:0,maxNativeZoom:8,maxZoom:14,tileSize:256,noWrap:true,bounds,updateWhenIdle:true,keepBuffer:2,errorTileUrl:''});
+ tiles=L.tileLayer(tileUrl(layer),{minZoom:0,maxNativeZoom:8,maxZoom:20,tileSize:256,noWrap:true,bounds,updateWhenIdle:true,keepBuffer:2,errorTileUrl:''});
  tiles.on('tileload',()=>{loaded++;if(loaded===1)$('status').textContent='Карта ETS2 1.62 загружена. Выбирай точку или изучай дороги.';});
  tiles.on('tileerror',()=>{errors++;if(errors>=4&&loaded===0&&!usingMirror){usingMirror=true;errors=0;$('status').textContent='Основной источник не ответил, пробую резервный сервер тайлов…';tiles.setUrl(tileUrl(layer));}else if(errors>=8&&loaded===0){$('status').textContent='Картографические тайлы не загружаются. Оба внешних источника недоступны. Проверь соединение и повтори попытку позже.';}});
  tiles.addTo(map);
@@ -117,10 +117,10 @@ function dropPin(ll,showPopup){
  if(showPopup)pin.bindPopup('<strong>Выбранная точка</strong><br>'+label).openPopup();
 }
 map.on('click',e=>dropPin(e.latlng,true));
-map.on('zoomend',()=>{$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 14';});
+map.on('zoomend',()=>{$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 20';});
 $('layer').onchange=e=>setLayer(e.target.value);
 $('home').onclick=()=>map.setView([-128,128],2);
-$('zoomCity').onclick=()=>map.setZoom(Math.min(14,map.getZoom()+2));
+$('zoomCity').onclick=()=>map.setZoom(Math.min(20,map.getZoom()+2));
 $('clear').onclick=()=>{if(pin)map.removeLayer(pin);pin=null;pinCoords=null;$('coordinates').textContent='Точка не выбрана';$('copy').disabled=$('clear').disabled=true;$('copyStatus').textContent='';};
 $('copy').onclick=async()=>{
  if(!pinCoords)return;
@@ -132,9 +132,9 @@ if(q.get('layer')==='TMP')$('layer').value='TMP';
 setLayer($('layer').value);
 const x=Number(q.get('x')),y=Number(q.get('y')),z=Number(q.get('z'));
 if(q.has('x')&&q.has('y')&&Number.isFinite(x)&&Number.isFinite(y)&&x>=EXT.x1&&x<=EXT.x2&&y>=EXT.y1&&y<=EXT.y2){
- const ll=fromGame(x,y);map.setView(ll,Number.isFinite(z)?Math.max(0,Math.min(14,z)):6);dropPin(ll,true);
+ const ll=fromGame(x,y);map.setView(ll,Number.isFinite(z)?Math.max(0,Math.min(20,z)):6);dropPin(ll,true);
 }
-$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 14';
+$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 20';
 window.addEventListener('resize',()=>map.invalidateSize());
 })();
 </script></body></html>
