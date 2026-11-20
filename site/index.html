@@ -10,12 +10,13 @@
   <script defer src="config.js"></script>
   <script defer src="routepack.js"></script>
   <script defer src="road-cache.js"></script>
+  <script defer src="map-storage.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.4</span></div>
+      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.5</span></div>
       <div id="connectionPill" class="connection-pill"><span class="dot"></span><span id="connectionLabel">Не подключено</span></div>
     </header>
     <main class="layout">
@@ -42,7 +43,12 @@
         <section class="panel map-import-panel">
           <div class="eyebrow">КАРТА ETS2</div>
           <h2>Настоящие дороги</h2>
-          <p class="muted">Загрузи <code>ets2-routepack.json</code> из файлов своей игры. Обработка идёт в браузере, без отправки карты на сервер.</p>
+          <p class="muted">Выбери карту из файлов ETS2 один раз: она сохранится <strong>только на этом устройстве</strong>. Для разных наборов DLC и картографических модов можно создавать отдельные профили.</p>
+          <label for="savedMapSelect">Сохранённая карта</label>
+          <select id="savedMapSelect"><option value="">Демо-карта</option></select>
+          <button id="deleteSavedMap" class="secondary small" type="button" disabled>Удалить выбранную карту</button>
+          <label for="mapProfileName" style="margin-top:16px">Название новой карты (необязательно)</label>
+          <input id="mapProfileName" type="text" maxlength="100" placeholder="Например, ETS2 + все мои DLC">
           <label for="mapFile" class="file-label">Открыть файл карты</label>
           <input id="mapFile" type="file" accept=".json,application/json">
           <p id="mapImportStatus" class="hint" aria-live="polite">Сейчас используется демонстрационная схема.</p>
