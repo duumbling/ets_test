@@ -2,13 +2,14 @@
 const assert = require('node:assert/strict');
 
 // Minimal async IndexedDB mock for browser-independent regression testing.
-const items = new Map();
-let created=false;
+const stores=new Map();
 const db={
-  objectStoreNames: {contains:()=>created},
-  createObjectStore(){created=true;},
+  objectStoreNames:{contains:name=>stores.has(name)},
+  createObjectStore(name){stores.set(name,new Map());},
   close(){},
-  transaction(){
+  transaction(storeName){
+    const items=stores.get(storeName);
+    assert.ok(items,'Missing IndexedDB store: '+storeName);
     const tx={oncomplete:null,onerror:null,onabort:null};
     tx.objectStore=()=>({
       put(entry){return query(()=>{items.set(entry.id,entry);return entry.id;});},
@@ -30,7 +31,7 @@ const db={
 global.indexedDB={
   open(){
     const req={onsuccess:null,onerror:null,onblocked:null,onupgradeneeded:null,result:db};
-    queueMicrotask(()=>{if(!created)req.onupgradeneeded?.();req.onsuccess?.();});
+    queueMicrotask(()=>{if(!stores.size)req.onupgradeneeded?.();req.onsuccess?.();});
     return req;
   }
 };
@@ -48,7 +49,13 @@ assert.ok(storage);
   assert.deepEqual(list.map(i=>i.id),['b','a']);
   assert.equal(list[0].cities,450);
   assert.ok(!('blob' in list[0]),'listing should not expose binary data to UI');
+  const cityBlob=new Blob(['GZIP TEST CONTENT'],{type:'application/gzip'});
+  await storage.saveDetail('a',cityBlob);
+  await storage.saveDetail('b',cityBlob);
+  assert.equal(await (await storage.getDetail('a')).blob.text(),'GZIP TEST CONTENT');
+  assert.equal((await storage.list()).length,2,'Detail files must not appear as map profiles');
   await storage.remove('b');
+  assert.equal(await storage.getDetail('b'),undefined,'Deleting a profile must remove its detailed roads');
   assert.equal(await storage.get('b'),undefined);
   assert.deepEqual((await storage.list()).map(x=>x.id),['a']);
   console.log('Map storage tests passed: save, restore, multiple profiles, delete');
