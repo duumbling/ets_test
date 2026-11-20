@@ -26,8 +26,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p assets
-          curl --fail --location --silent --show-error --retry 4 --retry-delay 5 --connect-timeout 20 --max-time 420 \
-            "$ETS2_MAP_URL" --output assets/ets2.pmtiles
+          if [ -s assets/ets2.pmtiles ]; then
+            echo "ETS2 PMTiles already bundled in the repository; using local archive."
+          else
+            echo "No map in repository; downloading initial PMTiles archive."
+            curl --fail --location --silent --show-error --retry 4 --retry-delay 5 --connect-timeout 20 --max-time 420 \
+              "$ETS2_MAP_URL" --output assets/ets2.pmtiles
+          fi
           python3 - <<'PY'
           from pathlib import Path
           import hashlib
