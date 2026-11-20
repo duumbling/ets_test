@@ -276,15 +276,79 @@
       ? `Загружено: ${S.nodes.length} городов, ${S.realPack.points.length} узлов, ${S.realPack.linkCount} направленных связей.`
       : 'Используется демонстрационная схема. Реальная карта не загружена.';
   }
+  const ACTIVE_MAP_KEY='ets2-active-map-profile';
+  async function updateSavedMaps(activeId='') {
+    const picker=$('savedMapSelect');
+    picker.replaceChildren(new Option('Базовая / демо-карта', ''));
+    if(!window.ETS2MapStorage) { picker.disabled=true; return; }
+    try {
+      const items=await window.ETS2MapStorage.list();
+      for(const item of items) {
+        const date=item.savedAt?new Date(item.savedAt).toLocaleDateString('ru-RU'):'';
+        picker.add(new Option(item.name+' · '+item.cities+' гор. · '+date,item.id));
+      }
+      picker.value=items.some(item=>item.id===activeId)?activeId:'';
+      $('deleteSavedMap').disabled=!picker.value;
+    } catch (error) {
+      console.warn('Offline map storage unavailable',error);
+      picker.disabled=true;
+      $('deleteSavedMap').disabled=true;
+    }
+  }
+  async function loadDefaultMap() {
+    const remote=await fetch('./data/ets2-routepack.json',{cache:'no-cache'});
+    if(remote.ok) {
+      loadMap(await remote.json(),true);
+    } else {
+      const demo=await fetch('./data/map.json');
+      if(!demo.ok)throw new Error('HTTP '+demo.status);
+      loadMap(await demo.json(),false);
+    }
+  }
+  async function activateSavedMap(id) {
+    if(!id) {
+      await loadDefaultMap();
+      localStorage.removeItem(ACTIVE_MAP_KEY);
+      await updateSavedMaps('');
+      return;
+    }
+    if(!window.ETS2MapStorage) throw new Error('Хранилище карт недоступно');
+    const item=await window.ETS2MapStorage.get(id);
+    if(!item?.blob)throw new Error('Сохранённый профиль карты не найден');
+    loadMap(JSON.parse(await item.blob.text()),true);
+    localStorage.setItem(ACTIVE_MAP_KEY,id);
+    await updateSavedMaps(id);
+    $('mapImportStatus').textContent+=' Сохранённая карта: «'+item.name+'» (только на этом устройстве).';
+  }
   async function loadFile(e){
     const file=e.target.files?.[0];if(!file)return;
     if(file.size>70*1024*1024){$('mapImportStatus').textContent='Файл слишком большой (максимум 70 МБ).';return;}
     $('mapImportStatus').textContent='Читаю дорожный граф…';
     try {
       const parsed=JSON.parse(await file.text());
-      // loadMap validates and normalizes only once to reduce 10 MB import work.
       loadMap(parsed,true);
+      const label=$('mapProfileName').value.trim()||
+        'ETS2 · '+S.nodes.length+' городов · '+new Date().toLocaleDateString('ru-RU');
+      if(window.ETS2MapStorage) {
+        const id='map-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+        try {
+          await window.ETS2MapStorage.save({
+            id,name:label,blob:file,cities:S.nodes.length,savedAt:Date.now()
+          });
+          localStorage.setItem(ACTIVE_MAP_KEY,id);
+          await updateSavedMaps(id);
+          $('mapImportStatus').textContent+=
+            ' Карта сохранена в браузере и будет открываться автоматически.';
+        } catch(error) {
+          console.warn('Map loaded but not saved in the browser',error);
+          $('mapImportStatus').textContent+=
+            ' Карта загружена, но не сохранена: '+error.message;
+        }
+      } else {
+        $('mapImportStatus').textContent+=' В этом браузере автоматическое сохранение недоступно.';
+      }
     }catch(error){$('mapImportStatus').textContent='Ошибка загрузки: '+error.message;console.error(error);}
+    e.target.value='';
   }
   async function init(){
     $('relayUrl').value=S.relayUrl;
@@ -292,17 +356,52 @@
     $('connectionMode').value=S.connectionMode==='relay'?'relay':'lan';
     S.connectionMode=$('connectionMode').value;
     setConnectionMode();
-    try{
-      const real=await fetch('./data/ets2-routepack.json',{cache:'no-cache'});
-      if(real.ok) {
-        loadMap(await real.json(),true);
-      } else {
-        const resp=await fetch('./data/map.json');if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-        loadMap(await resp.json(),false);
+    const active=localStorage.getItem(ACTIVE_MAP_KEY);
+    if(active&&window.ETS2MapStorage) {
+      try {
+        await activateSavedMap(active);
+        return;
+      } catch(error) {
+        console.warn('Unable to restore offline map, loading bundled map',error);
+        localStorage.removeItem(ACTIVE_MAP_KEY);
       }
-    }catch(error){$('mapNotice').textContent='Не удалось загрузить карту: '+error.message+'. Открывайте сайт через HTTP/HTTPS, а не file://';console.error(error);}
+    }
+    try {
+      await loadDefaultMap();
+      await updateSavedMaps('');
+    }catch(error) {
+      $('mapNotice').textContent='Не удалось загрузить карту: '+error.message+
+        '. Открывайте сайт через HTTP/HTTPS, а не file://';
+      console.error(error);
+    }
   }
   $('mapFile').addEventListener('change',loadFile);
+  $('savedMapSelect').addEventListener('change',async e=>{
+    try {
+      $('mapImportStatus').textContent='Открываю сохранённую карту…';
+      await activateSavedMap(e.target.value);
+    } catch(error) {
+      $('mapImportStatus').textContent='Не удалось переключить карту: '+error.message;
+      console.error(error);
+    }
+  });
+  $('deleteSavedMap').addEventListener('click',async()=>{
+    const picker=$('savedMapSelect'),id=picker.value;
+    if(!id||!window.ETS2MapStorage) return;
+    const name=picker.selectedOptions[0]?.textContent||'карту';
+    if(!confirm('Удалить «'+name+'» из этого браузера? Исходный JSON-файл останется у вас на компьютере.')) return;
+    try {
+      await window.ETS2MapStorage.remove(id);
+      if(localStorage.getItem(ACTIVE_MAP_KEY)===id) {
+        localStorage.removeItem(ACTIVE_MAP_KEY);
+        await loadDefaultMap();
+      }
+      await updateSavedMaps('');
+      $('mapImportStatus').textContent+=' Профиль удалён из браузера.';
+    } catch(error) {
+      $('mapImportStatus').textContent='Не удалось удалить карту: '+error.message;
+    }
+  });
   $('startSelect').addEventListener('change',e=>{S.start=e.target.value;buildRoute();});
   $('finishSelect').addEventListener('change',e=>{S.end=e.target.value;buildRoute();});
   $('addWaypoint').addEventListener('click',()=>{if(!S.nodes.length||S.via.length>=8)return;S.via.push(S.end);refreshWaypoints();buildRoute();});
