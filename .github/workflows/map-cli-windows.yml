@@ -12,6 +12,8 @@ on:
       - 'tools/test_icon_patch.py'
       - 'tools/fixtures/sii-comment-test.ts'
       - 'tools/build_city_detail.py'
+      - 'tools/patch_upstream_geojson.py'
+      - 'tools/test_geojson_patch.py'
       - 'tools/ets2-nav-convert.ts'
       - 'tools/fixtures/geojson-city-smoke.ts'
       - '.github/workflows/map-cli-windows.yml'
@@ -68,6 +70,15 @@ jobs:
           Copy-Item tools/fixtures/sii-comment-test.ts maps-upstream/sii-comment-test.ts
           Push-Location maps-upstream
           try { npx --no-install tsx sii-comment-test.ts; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } finally { Pop-Location }
+      - name: Patch upstream GeoJSON ferry DLC incompatibility
+        shell: pwsh
+        run: |
+          python -c "import sys; sys.path.insert(0,'tools'); from pathlib import Path; from patch_upstream_geojson import patch_geojson_ferries, NEW; p=Path('maps-upstream'); assert patch_geojson_ferries(p); assert not patch_geojson_ferries(p); assert NEW in (p/'packages/clis/generator/geo-json/map.ts').read_text(encoding='utf-8'); print('Ferry-free street geometry parser verified')"
+      - name: Verify patched GeoJSON generator module imports on Windows
+        shell: pwsh
+        working-directory: maps-upstream
+        run: |
+          npx --no-install tsx -e "import {convertToMapGeoJson} from './packages/clis/generator/geo-json/map.ts'; if (typeof convertToMapGeoJson !== 'function') throw Error('GeoJSON conversion not available'); console.log('Patched GeoJSON map module OK')"
       - name: Validate city detail exporter against real projection on Windows
         shell: pwsh
         run: |
