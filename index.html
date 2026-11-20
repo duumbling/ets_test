@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ETS2 Atlas — интерактивная карта Euro Truck Simulator 2</title>
+<meta name="description" content="Интерактивная карта ETS2 1.62 с дорогами официальных DLC, масштабированием, координатами и ссылками на точки.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoTqRqgM2J/4rA=" crossorigin="">
+<style>
+:root{color-scheme:dark;--bg:#0b1018;--panel:#141c29;--border:#29394c;--text:#f3f7ff;--muted:#9cacc1;--accent:#e5bd69}
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+.app{height:100%;display:grid;grid-template-columns:330px minmax(0,1fr)}
+aside{z-index:1100;display:flex;flex-direction:column;padding:28px 23px 20px;gap:21px;border-right:1px solid var(--border);background:linear-gradient(155deg,#192434,#101824 70%);overflow-y:auto}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;display:grid;place-items:center;background:#e5bd69;color:#17202e;border-radius:13px;font-size:25px;font-weight:900}.brand strong{font-size:19px;letter-spacing:.08em}.brand small{display:block;color:var(--accent);letter-spacing:.18em;font-size:10px;font-weight:800;margin-top:2px}
+.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:800}
+h1{font-size:28px;line-height:1.12;margin:10px 0 10px;letter-spacing:-.04em}p{color:var(--muted);font-size:13px;line-height:1.65;margin:0}section{padding-top:19px;border-top:1px solid var(--border)}
+label{display:block;color:#ccd7e6;font-size:12px;font-weight:700;margin-bottom:9px}
+select,button,input{font:inherit}select{width:100%;background:#0c1420;border:1px solid #3d4e61;color:white;padding:12px 14px;border-radius:10px;font-size:14px}
+button{background:var(--accent);color:#17202e;border:0;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;padding:12px 14px}button:hover{filter:brightness(1.1)}button.secondary{background:#263447;color:white;border:1px solid #40526b}
+.actionrow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.readout{background:#0b1420;border:1px solid #344356;border-radius:12px;padding:14px;margin:12px 0 2px}
+.readout span{display:block;font-size:11px;color:var(--muted)}.readout strong{font-variant-numeric:tabular-nums;display:block;font-size:17px;letter-spacing:.01em;margin-top:6px;word-break:break-word}
+.note{border:1px solid #4b4536;background:#252518;padding:12px;border-radius:10px;font-size:11px;color:#d6c6a4;line-height:1.6}
+.footer{margin-top:auto;font-size:10px;color:#8695aa;line-height:1.8}.footer a{color:#c8d9f4}
+.stage{position:relative;min-width:0;overflow:hidden;background:#101a27}.map{position:absolute;inset:0;background:#172536}
+.topbar{z-index:800;position:absolute;top:20px;left:20px;right:20px;pointer-events:none;display:flex;justify-content:space-between;align-items:start;gap:12px}
+.chip{backdrop-filter:blur(12px);background:#111b29d9;border:1px solid #40516a;border-radius:12px;padding:12px 15px;box-shadow:0 9px 30px #0005}
+.chip strong{font-size:13px}.chip small{display:block;color:#bec9da;margin-top:3px;font-size:11px}
+.bottom{position:absolute;z-index:800;bottom:20px;left:20px;right:20px;pointer-events:none;display:flex;gap:12px;justify-content:space-between;align-items:end}
+.status{max-width:460px;background:#111b29e8;border:1px solid #384a5d;border-radius:10px;color:#d6e1f0;font-size:12px;line-height:1.5;padding:12px 15px}
+.leaflet-container{background:#162435;font-family:inherit}.leaflet-control-zoom a{background:#1b2738!important;color:#f5e4c2!important;border-color:#38485d!important}.leaflet-control-attribution{background:#0c1724de!important;color:#aab9c9!important}.leaflet-control-attribution a{color:#dcbf88!important}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#162334;color:#fff}.leaflet-popup-content{margin:14px;line-height:1.5}
+.pin{background:#e5bd69;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 0 5px #e5bd6933}
+@media(max-width:780px){.app{grid-template-columns:1fr;grid-template-rows:auto minmax(400px,1fr)}aside{max-height:46vh;padding:17px;gap:10px}.brand strong{font-size:16px}.intro{display:none}section{padding-top:12px}h1{font-size:20px}.stage{min-height:54vh}.topbar{top:12px;left:12px;right:12px}.chip{padding:8px 10px}.bottom{bottom:12px;left:12px;right:12px}.status{font-size:10px}}
+</style></head>
+<body><div class="app">
+<aside>
+<div class="brand"><div class="logo">↗</div><div><strong>ETS2 ATLAS</strong><small>EURO TRUCK SIMULATOR 2</small></div></div>
+<div class="intro"><div class="eyebrow">Интерактивная карта</div><h1>Вся Европа.<br>На твоём экране.</h1><p>Настоящие картографические тайлы ETS2 1.62. Перемещай карту, приближай дороги и отмечай интересные места.</p></div>
+<section><label for="layer">Картографический слой</label><select id="layer"><option value="Europe">ETS2 1.62 · карта Европы</option><option value="TMP">ETS2 1.62 · слой TruckersMP</option></select><p style="margin-top:9px">Данные из ETS2 Map Toolkit. Заявлена поддержка официальных DLC; моды вроде ProMods и RusMap не подтверждены.</p></section>
+<section><div class="eyebrow">Точки на карте</div><p style="margin-top:8px">Нажми на карту, чтобы поставить метку и получить игровые координаты.</p><div class="readout"><span>Координаты выбранного места (X / Y)</span><strong id="coordinates">Точка не выбрана</strong></div><div class="actionrow"><button id="copy" disabled>Скопировать ссылку</button><button class="secondary" id="clear" disabled>Убрать метку</button></div><p id="copyStatus" aria-live="polite" style="margin-top:9px"></p></section>
+<section><div class="eyebrow">Масштаб</div><p style="margin-top:9px">Колесо мыши — увеличить карту. Перетаскивание — перемещение. Двойной щелчок — приблизить.</p><div class="actionrow"><button class="secondary" id="home">Показать всю карту</button><button class="secondary" id="zoomCity">Приблизить</button></div></section>
+<div class="note">Это карта для изучения дорог, а не готовый GPS. Построение маршрута по дорожному графу и подключение живой телеметрии будут отдельными этапами. Карта зависит от доступности публичного источника тайлов.</div>
+<div class="footer">Неофициальный проект, не связан с SCS Software. Игровые данные © SCS Software. Источник: <a href="https://github.com/nulijiazaizhong/ETS2-map-toolkit" target="_blank" rel="noopener">ETS2 Map Toolkit</a>. Картографическая библиотека: <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a> (BSD-2-Clause).</div>
+</aside>
+<main class="stage"><div id="map" class="map" aria-label="Интерактивная карта дорог Euro Truck Simulator 2"></div>
+<div class="topbar"><div class="chip"><strong>ETS2 · EUROPE</strong><small id="activeLabel">Официальная карта · версия 1.62</small></div><div class="chip"><strong id="zoomLabel">МАСШТАБ —</strong><small>Готовые игровые тайлы</small></div></div>
+<div class="bottom"><div class="status" id="status" role="status">Загрузка карты…</div><div class="status">Клик по карте → координаты и метка</div></div></main>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const REPO='https://raw.githubusercontent.com/nulijiazaizhong/ETS2-map-toolkit/main/data/maps/1.62/ETS2/';
+const EXT={x1:-113177.305,x2:97925.63,y1:-122648.086,y2:88454.85};
+const SIZE=256;
+if(!window.L){$('status').textContent='Не загрузилась библиотека Leaflet. Проверь соединение с интернетом.';return;}
+const bounds=L.latLngBounds([[-SIZE,0],[0,SIZE]]);
+const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:8,zoomControl:false,attributionControl:true,maxBounds:bounds,maxBoundsViscosity:1,zoomSnap:1});
+L.control.zoom({position:'bottomright'}).addTo(map);
+map.attributionControl.setPrefix(false);
+map.attributionControl.addAttribution('© SCS Software · ETS2 Map Toolkit');
+map.fitBounds(bounds,{padding:[12,12]});
+let tiles=null,pin=null,pinCoords=null,errors=0,loaded=0;
+function tileUrl(layer){return REPO+layer+'/{z}/{x}/{y}.png';}
+function setLayer(layer){
+ errors=0;loaded=0;
+ if(tiles)map.removeLayer(tiles);
+ tiles=L.tileLayer(tileUrl(layer),{minZoom:0,maxNativeZoom:8,maxZoom:8,tileSize:256,noWrap:true,bounds,updateWhenIdle:true,keepBuffer:2,errorTileUrl:''});
+ tiles.on('tileload',()=>{loaded++;if(loaded===1)$('status').textContent='Карта ETS2 1.62 загружена. Выбирай точку или изучай дороги.';});
+ tiles.on('tileerror',()=>{errors++;if(errors>5&&loaded===0)$('status').textContent='Не удаётся получить тайлы от источника. Проверь интернет или доступность GitHub Raw.';});
+ tiles.addTo(map);
+ $('activeLabel').textContent=layer==='TMP'?'TruckersMP · версия 1.62':'Европа · версия 1.62';
+ $('status').textContent='Загружаю реальные тайлы ETS2 1.62 из публичного репозитория…';
+}
+function toGame(ll){
+ const normalizedX=Math.max(0,Math.min(1,ll.lng/SIZE));
+ const normalizedY=Math.max(0,Math.min(1,-ll.lat/SIZE));
+ return {x:EXT.x1+normalizedX*(EXT.x2-EXT.x1),y:EXT.y2-normalizedY*(EXT.y2-EXT.y1)};
+}
+function fromGame(x,y){
+ return L.latLng(-((EXT.y2-y)/(EXT.y2-EXT.y1))*SIZE,((x-EXT.x1)/(EXT.x2-EXT.x1))*SIZE);
+}
+function dropPin(ll,showPopup){
+ pinCoords=toGame(ll);
+ if(pin)map.removeLayer(pin);
+ pin=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map);
+ const label='X '+pinCoords.x.toFixed(0)+' · Y '+pinCoords.y.toFixed(0);
+ $('coordinates').textContent=label;
+ $('copy').disabled=false;$('clear').disabled=false;
+ if(showPopup)pin.bindPopup('<strong>Выбранная точка</strong><br>'+label).openPopup();
+}
+map.on('click',e=>dropPin(e.latlng,true));
+map.on('zoomend',()=>{$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 8';});
+$('layer').onchange=e=>setLayer(e.target.value);
+$('home').onclick=()=>map.fitBounds(bounds,{padding:[10,10]});
+$('zoomCity').onclick=()=>map.setZoom(Math.min(8,map.getZoom()+2));
+$('clear').onclick=()=>{if(pin)map.removeLayer(pin);pin=null;pinCoords=null;$('coordinates').textContent='Точка не выбрана';$('copy').disabled=$('clear').disabled=true;$('copyStatus').textContent='';};
+$('copy').onclick=async()=>{
+ if(!pinCoords)return;
+ const url=new URL(location.href);url.searchParams.set('x',pinCoords.x.toFixed(2));url.searchParams.set('y',pinCoords.y.toFixed(2));url.searchParams.set('z',map.getZoom());url.searchParams.set('layer',$('layer').value);
+ try{await navigator.clipboard.writeText(url.toString());$('copyStatus').textContent='Ссылка скопирована.';}catch(e){prompt('Скопируй ссылку:',url.toString());}
+};
+const q=new URLSearchParams(location.search);
+if(q.get('layer')==='TMP')$('layer').value='TMP';
+setLayer($('layer').value);
+const x=Number(q.get('x')),y=Number(q.get('y')),z=Number(q.get('z'));
+if(q.has('x')&&q.has('y')&&Number.isFinite(x)&&Number.isFinite(y)&&x>=EXT.x1&&x<=EXT.x2&&y>=EXT.y1&&y<=EXT.y2){
+ const ll=fromGame(x,y);map.setView(ll,Number.isFinite(z)?Math.max(0,Math.min(8,z)):6);dropPin(ll,true);
+}
+$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 8';
+window.addEventListener('resize',()=>map.invalidateSize());
+})();
+</script></body></html>
