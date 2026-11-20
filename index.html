@@ -69,6 +69,13 @@ button{background:var(--accent);color:#17202e;border:0;border-radius:10px;font-s
 <aside>
 <div class="brand"><div class="logo">↗</div><div><strong>ETS2 ATLAS</strong><small>EURO TRUCK SIMULATOR 2</small></div></div>
 <div class="intro"><div class="eyebrow">Интерактивная карта</div><h1>Вся Европа.<br>На твоём экране.</h1><p>Настоящие картографические тайлы ETS2 1.62. Перемещай карту, приближай дороги и отмечай интересные места.</p></div>
+<section style="border:1px solid #56694f;background:linear-gradient(135deg,#1d2d2e,#15252a);padding:16px;border-radius:14px">
+<div class="eyebrow">Новый режим · вектор</div>
+<h2 style="margin:8px 0;font-size:19px;letter-spacing:-.02em">Чёткие дороги без размытия</h2>
+<p>Готовая векторная карта ETS2 с масштабом до 22. Не растягивает PNG: перекрёстки и дороги рисуются линиями.</p>
+<a href="vector.html" style="display:block;margin-top:12px;padding:12px 14px;border-radius:10px;background:#e5bd69;color:#14202e;font-weight:900;font-size:13px;text-align:center;text-decoration:none">Открыть векторную карту</a>
+<p style="margin-top:9px;font-size:11px">Нужно скачать один PMTiles-файл с GitHub Releases и выбрать его в просмотрщике. После импорта он сохраняется в браузере.</p>
+</section>
 <section><label for="layer">Картографический слой</label><select id="layer"><option value="Europe">ETS2 1.62 · карта Европы</option><option value="TMP">ETS2 1.62 · слой TruckersMP</option></select><p style="margin-top:9px">Данные из ETS2 Map Toolkit. Заявлена поддержка официальных DLC; моды вроде ProMods и RusMap не подтверждены.</p></section>
 <section><div class="eyebrow">Точки на карте</div><p style="margin-top:8px">Нажми на карту, чтобы поставить метку и получить игровые координаты.</p><div class="readout"><span>Координаты выбранного места (X / Y)</span><strong id="coordinates">Точка не выбрана</strong></div><div class="actionrow"><button id="copy" disabled>Скопировать ссылку</button><button class="secondary" id="clear" disabled>Убрать метку</button></div><p id="copyStatus" aria-live="polite" style="margin-top:9px"></p></section>
 <section><div class="eyebrow">Отображение деталей</div><label for="renderMode" style="margin-top:10px">Режим прорисовки при приближении</label><select id="renderMode"><option value="sharp">Чёткие края (без размытия)</option><option value="smooth">Сглаженная картинка</option></select><p style="margin-top:9px">Исходные данные заканчиваются на уровне 8. При увеличении выше 8 чёткий режим убирает размытие, но отдельные пиксели становятся заметны. Новые детали дорог не добавляются.</p></section>
