@@ -14,7 +14,7 @@
 
 ### OpenHaul: скачиваемый файл карты
 
-В [GitHub Releases OpenHaul](https://github.com/NekoSuneProjects/OpenHaul/releases/tag/map-data) есть **готовый ETS2 PMTiles** (от 03.10.2026, около 22,6 МБ), который можно скачать самостоятельно. Код OpenHaul использует MapLibre и тот же класс векторных данных из TruckSim Maps.
+В [GitHub Releases OpenHaul](https://github.com/NekoSuneProjects/OpenHaul/releases/tag/map-data) есть **готовый ETS2 PMTiles** (от 03.10.2026, около 22,6 МБ), который можно скачать самостоятельно. Код OpenHaul использует MapLibre и тот же класс векторных данных из TruckSim Maps. **Я отдельно проверил скачивание в GitHub Actions:** файл весит **22 590 428 байт**, имеет корректный заголовок PMTiles v3, содержит векторный слой `ets2` и масштабы **1–13**. Это подтверждает пригодность формата, но не полноту всех DLC или точность навигации. [Результаты проверки](https://github.com/duumbling/ets_test/actions/runs/44768567213).
 
 В проекте ETS2 Navigator создана отдельная [страница просмотра готового файла](https://duumbling.github.io/ets_test/online-map.html). Она позволяет открыть скачанный `.pmtiles` из браузера через `PMTiles.FileSource` без загрузки игровых архивов на наш сервер и без обращения к чужому закрытому CDN.
 
