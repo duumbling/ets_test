@@ -28,3 +28,16 @@
 #deleteSavedMap{display:block;width:100%;margin:8px 0 8px;text-align:center}
 #deleteSavedMap:disabled{opacity:.45;cursor:default}
 .map-import-panel strong{color:#e4f5f0}
+
+/* Browse real in-game destinations without rendering thousands of labels. */
+.poi-panel h2{font-size:22px;margin:8px 0 10px}
+#poiCategory,#poiSearch{width:100%}
+.poi-results{max-height:330px;overflow-y:auto;margin-top:11px;display:flex;flex-direction:column;gap:6px}
+.poi-result{display:flex;width:100%;min-height:50px;gap:10px;align-items:center;text-align:left;
+  background:#101f30;border:1px solid #314a5b;border-radius:9px;padding:7px 8px;color:#e8f5f9}
+.poi-result:hover,.poi-result:focus-visible{background:#1c3647;border-color:#6de2b0;outline:none}
+.poi-symbol{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;
+  color:#081825;font-size:12px;font-weight:800;flex-shrink:0}
+.poi-result-label{min-width:0;display:flex;flex-direction:column;gap:3px}
+.poi-result-label strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.poi-result-label small{font-size:10px;color:#a5bdce;line-height:1.3}
