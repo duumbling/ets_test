@@ -215,6 +215,39 @@
       ctx.font=`${selected?'650 ':''}12px system-ui`;ctx.fillStyle=selected?'#edfafa':'#a9bdc9';
       ctx.textAlign='left';ctx.fillText(n.name,p.x+13,p.y-8);
     }
+    S.visiblePois=[];
+    if(S.realPack&&S.poiIndex&&S.zoom>=1.8){
+      const b=bounds(),factor=b.scale*S.zoom;
+      const left=W/2+S.panX, top=H/2+S.panY;
+      const minX=b.cx+(-30-left)/factor,maxX=b.cx+(W+30-left)/factor;
+      const minZ=b.cz+(-30-top)/factor,maxZ=b.cz+(H+30-top)/factor;
+      const category=$('poiCategory').value||'all';
+      S.visiblePois=S.poiIndex.within(minX,minZ,maxX,maxZ,category,900);
+      ctx.save();
+      for(const poi of S.visiblePois){
+        const p=toScreen(poi.x,poi.z);
+        const meta=window.ETS2POI.categories[poi.category];
+        const selected=poi.id===S.end||poi.id===S.start||S.via.includes(poi.id);
+        ctx.beginPath();ctx.arc(p.x,p.y,selected?9:5,0,Math.PI*2);
+        ctx.fillStyle=meta.color;ctx.fill();
+        ctx.lineWidth=selected?3:1.5;ctx.strokeStyle=selected?'#ffffff':'#0a1723';ctx.stroke();
+        if(selected){
+          ctx.font='bold 12px system-ui';ctx.textAlign='left';ctx.fillStyle='#f6fbff';
+          ctx.fillText(poi.name,p.x+13,p.y-8);
+        }
+      }
+      ctx.restore();
+    }
+    const selectedPoi=S.nodesById.get(S.end);
+    if(selectedPoi?.category&&!S.visiblePois.some(p=>p.id===selectedPoi.id)){
+      const p=toScreen(selectedPoi.x,selectedPoi.z);
+      if(p.x>=-20&&p.x<=W+20&&p.y>=-20&&p.y<=H+20){
+        ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);
+        ctx.fillStyle='#ffa976';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+        ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='bold 12px system-ui';
+        ctx.fillText(selectedPoi.name,p.x+14,p.y-8);
+      }
+    }
     if(S.realPack&&S.live&&Number.isFinite(S.live.x)&&Number.isFinite(S.live.z)){
       const p=toScreen(S.live.x,S.live.z);ctx.save();ctx.translate(p.x,p.y);
       ctx.rotate((S.live.heading||0)*Math.PI*2);ctx.fillStyle='#fdf8b8';ctx.strokeStyle='#183036';ctx.lineWidth=3;
@@ -230,8 +263,15 @@
   function onPointerMove(e){if(!S.dragging)return;const dx=e.clientX-S.dragFrom.x,dy=e.clientY-S.dragFrom.y;
     if(Math.hypot(dx,dy)>5)S.moved=true;S.panX=S.dragFrom.px+dx;S.panY=S.dragFrom.py+dy;render();}
   function onPointerUp(e){if(!S.dragging)return;S.dragging=false;if(S.moved)return;
-    const r=canvas.getBoundingClientRect();const id=nearestCity(e.clientX-r.left,e.clientY-r.top);
-    if(id){S.end=id;$('finishSelect').value=id;buildRoute();}}
+    const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    let bestPoi=null,bestDistance=16;
+    for(const poi of S.visiblePois){
+      const p=toScreen(poi.x,poi.z),dist=Math.hypot(x-p.x,y-p.y);
+      if(dist<bestDistance){bestPoi=poi;bestDistance=dist;}
+    }
+    if(bestPoi){choosePoi(bestPoi);return;}
+    const id=nearestCity(x,y);
+    if(id){S.end=id;selectOptions('finishSelect',S.end);buildRoute();}}
   function zoom(by,p){ const old=S.zoom,newZoom=Math.max(.3,Math.min(5,old*by));const k=newZoom/old;
     const cx=p?.x??S.width/2,cy=p?.y??S.height/2;
     S.panX=cx-S.width/2-(cx-S.width/2-S.panX)*k;
