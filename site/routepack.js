@@ -44,10 +44,33 @@
       seen.add(c[0]);
       return { id:c[0],name:c[1],x:c[2],z:c[3],roadNode:c[4] };
     });
+    // Optional POIs preserve compatibility with old ETS2 routepacks.
+    // Source positions are the real in-game map coordinates. Road-node
+    // anchoring is approximate when the source has no explicit graph UID.
+    const categories = new Set(['fuel','service','parking','weigh','dealer','garage',
+      'recruitment','company','ferry','train','viewpoint','landmark']);
+    if (pack.pois !== undefined && (!Array.isArray(pack.pois) || pack.pois.length>80000)) {
+      throw new Error('Некорректный список объектов ETS2.');
+    }
+    const pois = (pack.pois||[]).map(p => {
+      if (!Array.isArray(p) || p.length!==7 || typeof p[0]!=='string' ||
+          p[0].length>70 || !categories.has(p[1]) || typeof p[2]!=='string' ||
+          p[2].length>120 || !Number.isFinite(p[3]) || !Number.isFinite(p[4]) ||
+          !isIndex(p[5],count) || (p[6]!==0 && p[6]!==1)) {
+        throw new Error('Некорректный объект карты.');
+      }
+      return {id:p[0],category:p[1],name:p[2],x:p[3],z:p[4],
+        roadNode:p[5],approximate:Boolean(p[6])};
+    });
+    const poiIds = new Set();
+    for(const poi of pois){
+      if(poiIds.has(poi.id)||seen.has(poi.id))throw new Error('Повторяющийся объект карты.');
+      poiIds.add(poi.id);
+    }
     return {
       title: pack.title || 'Дороги ETS2', coordinateSystem:'ets2', format:FORMAT,
       notice: 'Реальные данные узлов ETS2 (прямые отрезки между узлами). Это ещё не точный рисунок всех дорожных изгибов; дорожные ограничения на повороты упрощены.',
-      nodes:cities, points:pack.points, roads, adj, linkCount,
+      nodes:cities, pois, points:pack.points, roads, adj, linkCount,
       bounds:coordinateBounds(pack.points), source:pack.source||''
     };
   }
