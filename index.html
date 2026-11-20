@@ -1,160 +1,240 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ETS2 Atlas — интерактивная карта Euro Truck Simulator 2</title>
-<meta name="description" content="Интерактивная карта ETS2 1.62 с дорогами официальных DLC, масштабированием, координатами и ссылками на точки.">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoTqRqgM2J/4rA=" crossorigin="">
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1320">
+<title>ETS2 Atlas · Векторная карта</title>
+<meta name="description" content="Векторная карта Euro Truck Simulator 2: реальные дороги, перекрёстки, города и увеличенный масштаб без размытия PNG.">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
 <style>
-/* Self-contained Leaflet layout essentials: the map remains interactive even if remote CSS is blocked. */
-.leaflet-container{overflow:hidden;position:relative;outline:0;touch-action:none;-webkit-tap-highlight-color:transparent}
-.leaflet-container .leaflet-pane,.leaflet-container .leaflet-control-container{position:absolute;left:0;top:0}
-.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
-.leaflet-map-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer{position:absolute;left:0;top:0}
-.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{user-select:none;-webkit-user-select:none}
-.leaflet-tile{visibility:hidden;max-width:none!important;max-height:none!important}
-.leaflet-tile-loaded{visibility:inherit}.leaflet-zoom-animated{transform-origin:0 0}
-.leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}
-.leaflet-container img.leaflet-image-layer{max-width:none!important}
-.leaflet-control{position:relative;z-index:800;pointer-events:visiblePainted;pointer-events:auto;float:left;clear:both}
-.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
-.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}
-.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
-.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}
-.leaflet-left{left:0}.leaflet-right{right:0}.leaflet-control-container .leaflet-right .leaflet-control{float:right}
-.leaflet-control-zoom a{display:block;width:32px;height:32px;line-height:32px;text-align:center;text-decoration:none;font-size:21px;font-weight:bold}
-.leaflet-control-zoom{overflow:hidden;border:2px solid #ffffff20;border-radius:9px}
-.leaflet-control-attribution{font-size:10px;line-height:1.3;padding:2px 6px;max-width:65vw}
-.leaflet-interactive{cursor:pointer}.leaflet-grab{cursor:grab}.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-interactive{cursor:grabbing}
-.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}.leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 3px 14px #0006;padding:1px}
-.leaflet-popup-content{min-width:150px}.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-left:-20px;overflow:hidden;pointer-events:none}
-.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;transform:rotate(45deg);box-shadow:0 3px 14px #0004}
-.leaflet-popup-close-button{position:absolute;right:3px;top:3px;text-align:center;text-decoration:none;color:#ddd;font-size:20px;width:24px;height:24px}
-.leaflet-popup-pane{pointer-events:none}.leaflet-popup{pointer-events:auto}
-
-
-:root{color-scheme:dark;--bg:#0b1018;--panel:#141c29;--border:#29394c;--text:#f3f7ff;--muted:#9cacc1;--accent:#e5bd69}
-*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
-.app{height:100%;display:grid;grid-template-columns:330px minmax(0,1fr)}
-aside{z-index:1100;display:flex;flex-direction:column;padding:28px 23px 20px;gap:21px;border-right:1px solid var(--border);background:linear-gradient(155deg,#192434,#101824 70%);overflow-y:auto}
-.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;display:grid;place-items:center;background:#e5bd69;color:#17202e;border-radius:13px;font-size:25px;font-weight:900}.brand strong{font-size:19px;letter-spacing:.08em}.brand small{display:block;color:var(--accent);letter-spacing:.18em;font-size:10px;font-weight:800;margin-top:2px}
-.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:800}
-h1{font-size:28px;line-height:1.12;margin:10px 0 10px;letter-spacing:-.04em}p{color:var(--muted);font-size:13px;line-height:1.65;margin:0}section{padding-top:19px;border-top:1px solid var(--border)}
-label{display:block;color:#ccd7e6;font-size:12px;font-weight:700;margin-bottom:9px}
-select,button,input{font:inherit}select{width:100%;background:#0c1420;border:1px solid #3d4e61;color:white;padding:12px 14px;border-radius:10px;font-size:14px}
-button{background:var(--accent);color:#17202e;border:0;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;padding:12px 14px}button:hover{filter:brightness(1.1)}button.secondary{background:#263447;color:white;border:1px solid #40526b}
-.actionrow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
-.readout{background:#0b1420;border:1px solid #344356;border-radius:12px;padding:14px;margin:12px 0 2px}
-.readout span{display:block;font-size:11px;color:var(--muted)}.readout strong{font-variant-numeric:tabular-nums;display:block;font-size:17px;letter-spacing:.01em;margin-top:6px;word-break:break-word}
-.note{border:1px solid #4b4536;background:#252518;padding:12px;border-radius:10px;font-size:11px;color:#d6c6a4;line-height:1.6}
-.footer{margin-top:auto;font-size:10px;color:#8695aa;line-height:1.8}.footer a{color:#c8d9f4}
-.stage{position:relative;min-width:0;overflow:hidden;background:#101a27}.map{position:absolute;inset:0;background:#172536}
-.topbar{z-index:800;position:absolute;top:20px;left:20px;right:20px;pointer-events:none;display:flex;justify-content:space-between;align-items:start;gap:12px}
-.chip{backdrop-filter:blur(12px);background:#111b29d9;border:1px solid #40516a;border-radius:12px;padding:12px 15px;box-shadow:0 9px 30px #0005}
-.chip strong{font-size:13px}.chip small{display:block;color:#bec9da;margin-top:3px;font-size:11px}
-.bottom{position:absolute;z-index:800;bottom:20px;left:20px;right:20px;pointer-events:none;display:flex;gap:12px;justify-content:space-between;align-items:end}
-.status{max-width:460px;background:#111b29e8;border:1px solid #384a5d;border-radius:10px;color:#d6e1f0;font-size:12px;line-height:1.5;padding:12px 15px}
-.leaflet-container{background:#162435;font-family:inherit}.leaflet-control-zoom a{background:#1b2738!important;color:#f5e4c2!important;border-color:#38485d!important}.leaflet-control-attribution{background:#0c1724de!important;color:#aab9c9!important}.leaflet-control-attribution a{color:#dcbf88!important}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#162334;color:#fff}.leaflet-popup-content{margin:14px;line-height:1.5}
-.pin{background:#e5bd69;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 0 5px #e5bd6933}
-@media(max-width:780px){.app{grid-template-columns:1fr;grid-template-rows:auto minmax(400px,1fr)}aside{max-height:46vh;padding:17px;gap:10px}.brand strong{font-size:16px}.intro{display:none}section{padding-top:12px}h1{font-size:20px}.stage{min-height:54vh}.topbar{top:12px;left:12px;right:12px}.chip{padding:8px 10px}.bottom{bottom:12px;left:12px;right:12px}.status{font-size:10px}}
-
-/* Preserve source tile edges at overzoom instead of browser bilinear blur. */
-.stage.sharp-tiles .leaflet-tile-pane img.leaflet-tile{
- image-rendering:pixelated!important;
- image-rendering:crisp-edges!important;
-}
-.stage.sharp-tiles .leaflet-tile-pane{filter:contrast(1.08) saturate(1.06)}
-.stage.smooth-tiles .leaflet-tile-pane img.leaflet-tile{image-rendering:auto!important}
-</style></head>
-<body><div class="app">
-<aside>
-<div class="brand"><div class="logo">↗</div><div><strong>ETS2 ATLAS</strong><small>EURO TRUCK SIMULATOR 2</small></div></div>
-<div class="intro"><div class="eyebrow">Интерактивная карта</div><h1>Вся Европа.<br>На твоём экране.</h1><p>Настоящие картографические тайлы ETS2 1.62. Перемещай карту, приближай дороги и отмечай интересные места.</p></div>
-<section style="border:1px solid #56694f;background:linear-gradient(135deg,#1d2d2e,#15252a);padding:16px;border-radius:14px">
-<div class="eyebrow">Новый режим · вектор</div>
-<h2 style="margin:8px 0;font-size:19px;letter-spacing:-.02em">Чёткие дороги без размытия</h2>
-<p>Готовая векторная карта ETS2 с масштабом до 22. Не растягивает PNG: перекрёстки и дороги рисуются линиями.</p>
-<a href="vector.html" style="display:block;margin-top:12px;padding:12px 14px;border-radius:10px;background:#e5bd69;color:#14202e;font-weight:900;font-size:13px;text-align:center;text-decoration:none">Открыть векторную карту</a>
-<p style="margin-top:9px;font-size:11px">Нужно скачать один PMTiles-файл с GitHub Releases и выбрать его в просмотрщике. После импорта он сохраняется в браузере.</p>
-</section>
-<section><label for="layer">Картографический слой</label><select id="layer"><option value="Europe">ETS2 1.62 · карта Европы</option><option value="TMP">ETS2 1.62 · слой TruckersMP</option></select><p style="margin-top:9px">Данные из ETS2 Map Toolkit. Заявлена поддержка официальных DLC; моды вроде ProMods и RusMap не подтверждены.</p></section>
-<section><div class="eyebrow">Точки на карте</div><p style="margin-top:8px">Нажми на карту, чтобы поставить метку и получить игровые координаты.</p><div class="readout"><span>Координаты выбранного места (X / Y)</span><strong id="coordinates">Точка не выбрана</strong></div><div class="actionrow"><button id="copy" disabled>Скопировать ссылку</button><button class="secondary" id="clear" disabled>Убрать метку</button></div><p id="copyStatus" aria-live="polite" style="margin-top:9px"></p></section>
-<section><div class="eyebrow">Отображение деталей</div><label for="renderMode" style="margin-top:10px">Режим прорисовки при приближении</label><select id="renderMode"><option value="sharp">Чёткие края (без размытия)</option><option value="smooth">Сглаженная картинка</option></select><p style="margin-top:9px">Исходные данные заканчиваются на уровне 8. При увеличении выше 8 чёткий режим убирает размытие, но отдельные пиксели становятся заметны. Новые детали дорог не добавляются.</p></section>
-<section><div class="eyebrow">Масштаб</div><p style="margin-top:9px">Колесо мыши — увеличить карту. Перетаскивание — перемещение. Двойной щелчок — приблизить.</p><div class="actionrow"><button class="secondary" id="home">Показать всю карту</button><button class="secondary" id="zoomCity">Приблизить</button></div></section>
-<div class="note">Это карта для изучения дорог, а не готовый GPS. Построение маршрута по дорожному графу и подключение живой телеметрии будут отдельными этапами. Карта зависит от доступности публичного источника тайлов.</div>
-<div class="footer">Неофициальный проект, не связан с SCS Software. Игровые данные © SCS Software. Источник: <a href="https://github.com/nulijiazaizhong/ETS2-map-toolkit" target="_blank" rel="noopener">ETS2 Map Toolkit</a>. Картографическая библиотека: <a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a> (BSD-2-Clause).</div>
-</aside>
-<main class="stage"><div id="map" class="map" aria-label="Интерактивная карта дорог Euro Truck Simulator 2"></div>
-<div class="topbar"><div class="chip"><strong>ETS2 · EUROPE</strong><small id="activeLabel">Официальная карта · версия 1.62</small></div><div class="chip"><strong id="zoomLabel">МАСШТАБ —</strong><small>Готовые игровые тайлы</small></div></div>
-<div class="bottom"><div class="status" id="status" role="status">Загрузка карты…</div><div class="status">Клик по карте → координаты и метка</div></div></main>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0a1522;color:#edf5fb}
+:root{--accent:#e8c277;--muted:#9caebd;--line:#2d455b}
+.app{display:grid;grid-template-columns:340px minmax(0,1fr);height:100dvh;min-height:540px}
+.sidebar{z-index:2;background:linear-gradient(155deg,#1b2b3d,#0c1724);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:auto;padding:24px;gap:18px}
+.brand{font-weight:900;letter-spacing:.06em;font-size:18px}.brand small{display:block;color:var(--accent);letter-spacing:.12em;font-size:10px;margin-top:4px}
+.back{font-size:12px;color:var(--muted);text-decoration:none}.back:hover{color:white}
+.pill{color:var(--accent);font-size:10px;letter-spacing:.17em;text-transform:uppercase;font-weight:900}
+h1{font-size:27px;line-height:1.15;margin:8px 0 12px;letter-spacing:-.035em}
+p{font-size:12px;line-height:1.7;color:var(--muted);margin:0}
+.section{padding-top:17px;border-top:1px solid var(--line)}
+.step{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;margin-bottom:10px}
+.step span{width:23px;height:23px;display:grid;place-items:center;background:var(--accent);color:#142032;border-radius:7px;font-size:12px}
+.button{display:block;width:100%;border-radius:11px;background:var(--accent);color:#142032;padding:12px 14px;font:800 13px inherit;text-decoration:none;text-align:center;border:0;cursor:pointer}
+.button:hover{filter:brightness(1.08)}
+.button.ghost{background:#24384c;color:#e4edf7;border:1px solid #40566e}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+input[type=file]{width:100%;padding:10px 6px;color:#dfe8f4;font-size:12px;background:#0c1826;border:1px dashed #54718a;border-radius:10px}
+input[type=file]::file-selector-button{background:#31455c;color:white;border:0;border-radius:6px;padding:8px;font-weight:700;cursor:pointer}
+label{display:block;font-size:12px;font-weight:700;color:#dce7f3;margin-bottom:9px}
+.info{background:#0f2032;border:1px solid #3b5368;border-radius:11px;padding:13px;line-height:1.6;font-size:12px;color:#d0dce8;white-space:pre-wrap;word-break:break-word}
+.info.error{border-color:#995c50;background:#322326;color:#ffd0c7}.info.success{border-color:#50715c;background:#132b27;color:#cdf2d7}
+.note{border:1px solid #53462e;color:#e4d2ad;background:#2a271e;border-radius:10px;padding:12px;font-size:11px;line-height:1.6}
+.foot{margin-top:auto;font-size:10px;color:#90a1b3;line-height:1.65}.foot a{color:#e1c899}
+.mapbox{position:relative;min-width:0;overflow:hidden}.map{position:absolute;inset:0;background:#152b40}
+.overlay{z-index:4;position:absolute;top:17px;left:17px;max-width:min(380px,calc(100% - 34px));pointer-events:none;background:#111e30d9;border:1px solid #43586d;border-radius:12px;padding:12px 16px;backdrop-filter:blur(12px)}
+.overlay strong{display:block;font-size:12px}.overlay small{display:block;color:#b4c3d1;font-size:11px;margin-top:4px}
+.welcome{position:absolute;inset:0;z-index:3;background:#0e2030b8;display:flex;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:24px}
+.welcome>div{max-width:400px;background:#102338e8;border:1px solid #4b6478;border-radius:20px;padding:26px;box-shadow:0 12px 38px #0004}
+.welcome h2{font-size:22px;margin:0 0 12px}.welcome p{font-size:13px}
+.hidden{display:none}
+.maplibregl-control-container .maplibregl-ctrl-group{background:#1b2d40}.maplibregl-ctrl-group button{filter:invert(1)}
+.maplibregl-popup-content{background:#162b40;color:#fff;border-radius:11px}.maplibregl-popup-tip{border-top-color:#162b40!important}
+@media(max-width:760px){.app{display:flex;flex-direction:column;height:100dvh}.sidebar{flex:none;height:auto;max-height:44%;padding:14px;gap:10px}.brand{font-size:16px}.sidebar h1{font-size:20px}.section{padding-top:10px}.mapbox{min-height:56%;flex:1}.overlay{top:10px;left:10px}.welcome h2{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand">↗ ETS2 ATLAS <small>ВЕКТОРНАЯ КАРТА · BETA</small></div>
+<a class="back" href="raster.html">← Растровая карта (запасной вариант)</a>
+<div><div class="pill">Высокая детализация</div><h1>Дороги остаются чёткими при приближении</h1><p>Векторная геометрия ETS2 без растянутых PNG. Для работы нужна готовая карта формата PMTiles, опубликованная OpenHaul.</p></div>
+<div class="section">
+<div class="step"><span>1</span> Карта уже включена в приложение</div>
+<p>Векторный архив ETS2 устанавливается автоматически при публикации проекта. Никаких файлов скачивать и выбирать вручную не нужно.</p>
+<div class="info" id="assetStatus" style="margin-top:12px">Проверяю встроенную карту…</div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<div class="section">
+<details><summary style="cursor:pointer;font-size:12px;color:#b8c9d8">Резервный вариант: открыть свой PMTiles</summary>
+<p style="margin:10px 0">Если карта не загрузилась, можно использовать локальный архив. Ручная загрузка не обязательна для нормальной работы.</p>
+<label for="file">Выбрать файл .pmtiles</label>
+<input id="file" type="file" accept=".pmtiles,application/octet-stream">
+</details>
+</div>
+<div class="section">
+<div class="step"><span>2</span> Изучать карту</div>
+<div class="controls"><button id="zoom-city" class="button ghost" type="button">Приблизить +</button><button id="zoom-home" class="button ghost" type="button">Вся Европа</button></div>
+<p style="margin-top:10px">Колесо мыши и жесты масштабируют карту. Клик ставит метку, по которой можно скопировать ссылку.</p>
+<div class="controls" style="margin-top:12px"><button id="copy" class="button ghost" disabled type="button">Ссылка на точку</button><button id="clear" class="button ghost" disabled type="button">Убрать метку</button></div>
+</div>
+<div class="info" id="status" role="status" aria-live="polite">Проверяю встроенную карту ETS2…</div>
+<div class="note">Векторная карта не гарантирует полное покрытие актуальных DLC и сторонних модов (ProMods, RusMap). Пока это просмотрщик дорог и городов, не GPS: точные маршруты требуют отдельного дорожного графа.</div>
+<div class="foot">© SCS Software — игровые данные. Источник векторных файлов: <a href="https://github.com/NekoSuneProjects/OpenHaul">OpenHaul</a> / TruckSim Maps. Библиотеки: MapLibre GL JS и PMTiles. Этот проект не связан с SCS Software. Сайт GitHub Pages публичный, даже если используется лично.</div>
+</aside>
+<main class="mapbox" id="mapbox">
+<div id="map" class="map"></div>
+<div class="overlay"><strong>ETS2 · ВЕКТОРНАЯ КАРТА</strong><small id="mapmeta">Ожидание PMTiles · доступен масштаб до 22</small></div>
+<div class="welcome" id="welcome"><div><h2>Подробная карта ETS2</h2><p>Картографические данные подгружаются автоматически из этого сайта. Можно сразу увеличивать дороги и перекрёстки.</p></div></div>
+</main>
+</div>
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
 <script>
-(function(){
+(()=>{
 'use strict';
 const $=id=>document.getElementById(id);
-function setRenderMode(value){const stage=document.querySelector('.stage');stage.classList.toggle('sharp-tiles',value==='sharp');stage.classList.toggle('smooth-tiles',value==='smooth');localStorage.setItem('ets2-render-mode',value);}
-const savedRender=localStorage.getItem('ets2-render-mode')==='smooth'?'smooth':'sharp';
-$('renderMode').value=savedRender;setRenderMode(savedRender);
-$('renderMode').addEventListener('change',e=>setRenderMode(e.target.value));
-const REPO='https://raw.githubusercontent.com/nulijiazaizhong/ETS2-map-toolkit/main/data/maps/1.62/ETS2/';
-const MIRROR='https://cdn.jsdelivr.net/gh/nulijiazaizhong/ETS2-map-toolkit@main/data/maps/1.62/ETS2/';
-const EXT={x1:-113177.305,x2:97925.63,y1:-122648.086,y2:88454.85};
-const SIZE=256;
-if(!window.L){$('status').textContent='Не загрузилась библиотека Leaflet. Проверь соединение с интернетом.';return;}
-const bounds=L.latLngBounds([[-SIZE,0],[0,SIZE]]);
-const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:20,zoomControl:false,attributionControl:true,zoomSnap:1,zoomDelta:1,worldCopyJump:false});
-L.control.zoom({position:'bottomright'}).addTo(map);
-map.attributionControl.setPrefix(false);
-map.attributionControl.addAttribution('© SCS Software · ETS2 Map Toolkit');
-map.setView([-128,128],2);
-let tiles=null,pin=null,pinCoords=null,errors=0,loaded=0,usingMirror=false;
-function tileUrl(layer){return (usingMirror?MIRROR:REPO)+layer+'/{z}/{x}/{y}.png';}
-function setLayer(layer){
- errors=0;loaded=0;
- if(tiles)map.removeLayer(tiles);
- tiles=L.tileLayer(tileUrl(layer),{minZoom:0,maxNativeZoom:8,maxZoom:20,tileSize:256,noWrap:true,bounds,updateWhenIdle:true,keepBuffer:2,errorTileUrl:''});
- tiles.on('tileload',()=>{loaded++;if(loaded===1)$('status').textContent='Карта ETS2 1.62 загружена. Выбирай точку или изучай дороги.';});
- tiles.on('tileerror',()=>{errors++;if(errors>=4&&loaded===0&&!usingMirror){usingMirror=true;errors=0;$('status').textContent='Основной источник не ответил, пробую резервный сервер тайлов…';tiles.setUrl(tileUrl(layer));}else if(errors>=8&&loaded===0){$('status').textContent='Картографические тайлы не загружаются. Оба внешних источника недоступны. Проверь соединение и повтори попытку позже.';}});
- tiles.addTo(map);
- $('activeLabel').textContent=layer==='TMP'?'TruckersMP · версия 1.62':'Европа · версия 1.62';
- $('status').textContent='Загружаю реальные тайлы ETS2 1.62 из публичного репозитория…';
+let map=null, protocol=null, fileMap=null, latestPoint=null, activeFileName='';
+function notify(text,error=false,success=false){
+ const e=$('status');e.textContent=text;e.className='info'+(error?' error':success?' success':'');
 }
-function toGame(ll){
- const normalizedX=Math.max(0,Math.min(1,ll.lng/SIZE));
- const normalizedY=Math.max(0,Math.min(1,-ll.lat/SIZE));
- return {x:EXT.x1+normalizedX*(EXT.x2-EXT.x1),y:EXT.y2-normalizedY*(EXT.y2-EXT.y1)};
+const DB='ets2-atlas-vector-map', STORE='maps';
+function openDb(){
+ return new Promise((resolve,reject)=>{
+  if(!window.indexedDB)return reject(Error('Хранилище браузера недоступно'));
+  const req=indexedDB.open(DB,1);
+  req.onupgradeneeded=()=>req.result.createObjectStore(STORE);
+  req.onsuccess=()=>resolve(req.result);
+  req.onerror=()=>reject(req.error);
+ });
 }
-function fromGame(x,y){
- return L.latLng(-((EXT.y2-y)/(EXT.y2-EXT.y1))*SIZE,((x-EXT.x1)/(EXT.x2-EXT.x1))*SIZE);
+async function getStored(){
+ const db=await openDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readonly');const rq=tx.objectStore(STORE).get('active');
+  rq.onsuccess=()=>resolve(rq.result);rq.onerror=()=>reject(rq.error);tx.oncomplete=()=>db.close();tx.onerror=()=>db.close();
+ });
 }
-function dropPin(ll,showPopup){
- pinCoords=toGame(ll);
- if(pin)map.removeLayer(pin);
- pin=L.marker(ll,{icon:L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map);
- const label='X '+pinCoords.x.toFixed(0)+' · Y '+pinCoords.y.toFixed(0);
- $('coordinates').textContent=label;
- $('copy').disabled=false;$('clear').disabled=false;
- if(showPopup)pin.bindPopup('<strong>Выбранная точка</strong><br>'+label).openPopup();
+async function saveStored(file){
+ const db=await openDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put({data:file,name:file.name},'active');
+  tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};
+ });
 }
-map.on('click',e=>dropPin(e.latlng,true));
-map.on('zoomend',()=>{$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 20';});
-$('layer').onchange=e=>setLayer(e.target.value);
-$('home').onclick=()=>map.setView([-128,128],2);
-$('zoomCity').onclick=()=>map.setZoom(Math.min(20,map.getZoom()+2));
-$('clear').onclick=()=>{if(pin)map.removeLayer(pin);pin=null;pinCoords=null;$('coordinates').textContent='Точка не выбрана';$('copy').disabled=$('clear').disabled=true;$('copyStatus').textContent='';};
-$('copy').onclick=async()=>{
- if(!pinCoords)return;
- const url=new URL(location.href);url.searchParams.set('x',pinCoords.x.toFixed(2));url.searchParams.set('y',pinCoords.y.toFixed(2));url.searchParams.set('z',map.getZoom());url.searchParams.set('layer',$('layer').value);
- try{await navigator.clipboard.writeText(url.toString());$('copyStatus').textContent='Ссылка скопирована.';}catch(e){prompt('Скопируй ссылку:',url.toString());}
-};
-const q=new URLSearchParams(location.search);
-if(q.get('layer')==='TMP')$('layer').value='TMP';
-setLayer($('layer').value);
-const x=Number(q.get('x')),y=Number(q.get('y')),z=Number(q.get('z'));
-if(q.has('x')&&q.has('y')&&Number.isFinite(x)&&Number.isFinite(y)&&x>=EXT.x1&&x<=EXT.x2&&y>=EXT.y1&&y<=EXT.y2){
- const ll=fromGame(x,y);map.setView(ll,Number.isFinite(z)?Math.max(0,Math.min(20,z)):6);dropPin(ll,true);
+function markers(){return {type:'FeatureCollection',features:latestPoint?[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:latestPoint}}]:[]};}
+function makeStyle(layer,url){
+ const roadWidth=['interpolate',['linear'],['zoom'],4,0.55,7,1.2,10,2.6,13,5.8,16,11,19,21,22,38];
+ return {
+  version:8,
+  glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sources:{roads:{type:'vector',url},picked:{type:'geojson',data:markers()}},
+  layers:[
+   {id:'background',type:'background',paint:{'background-color':'#101e2e'}},
+   {id:'terrain',type:'fill',source:'roads','source-layer':layer,filter:['==',['get','type'],'mapArea'],paint:{'fill-color':['match',['get','color'],0,'#273e50',1,'#435769',2,'#1a2d3d',3,'#294435','#294053'],'fill-opacity':0.8}},
+   {id:'prefabs',type:'fill',source:'roads','source-layer':layer,filter:['==',['get','type'],'prefab'],paint:{'fill-color':'#6c8492','fill-opacity':0.86}},
+   {id:'roads-casing',type:'line',source:'roads','source-layer':layer,filter:['==',['get','type'],'road'],layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1b2936','line-width':['+',roadWidth,3.5]}},
+   {id:'roads',type:'line',source:'roads','source-layer':layer,filter:['==',['get','type'],'road'],layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#b9cbd3','line-width':roadWidth}},
+   {id:'cities',type:'symbol',source:'roads','source-layer':layer,filter:['==',['get','type'],'city'],layout:{'text-field':['coalesce',['get','name'],''],'text-font':['Open Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],4,10,9,15,16,18],'text-allow-overlap':false},paint:{'text-color':'#f6f6e9','text-halo-color':'#0d2032','text-halo-width':1.5}},
+   {id:'poi',type:'circle',source:'roads','source-layer':layer,minzoom:8,filter:['==',['get','type'],'poi'],paint:{'circle-radius':['interpolate',['linear'],['zoom'],8,2,15,5],'circle-color':'#e8c277','circle-stroke-color':'#243342','circle-stroke-width':1.7}},
+   {id:'pick-ring',type:'circle',source:'picked',paint:{'circle-radius':10,'circle-color':'#e8c277','circle-stroke-color':'white','circle-stroke-width':3}}
+  ]
+ };
 }
-$('zoomLabel').textContent='МАСШТАБ '+map.getZoom()+' / 20';
-window.addEventListener('resize',()=>map.invalidateSize());
+function initializeMap(pm,source,layer,fileName){
+ const sourceURL='pmtiles://'+(typeof source==='string'?source:source.getKey());
+ if(map){map.remove();map=null;}
+ if(!protocol){protocol=new pmtiles.Protocol();maplibregl.addProtocol('pmtiles',protocol.tile);}
+ protocol.add(pm);fileMap=pm;
+ const urlParams=new URLSearchParams(location.search);
+ const lon=Number(urlParams.get('lon')),lat=Number(urlParams.get('lat')),z=Number(urlParams.get('z'));
+ const saved=urlParams.has('lon')&&urlParams.has('lat')&&Number.isFinite(lon)&&Number.isFinite(lat)&&lon>=-180&&lon<=180&&lat>=-85&&lat<=85;
+ if(saved)latestPoint=[lon,lat];
+ map=new maplibregl.Map({
+  container:'map',style:makeStyle(layer,sourceURL),center:saved?[lon,lat]:[15,51],
+  zoom:saved&&Number.isFinite(z)?Math.max(2,Math.min(22,z)):4.7,
+  minZoom:2,maxZoom:22,maxPitch:0,attributionControl:false,fadeDuration:0
+ });
+ map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+ map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'© SCS Software · OpenHaul / TruckSim Maps'}),'bottom-left');
+ map.on('load',()=>{
+  $('welcome').classList.add('hidden');
+  $('mapmeta').textContent=fileName+' · вектор · масштаб до 22';
+  notify('Векторная карта загружена. Приближай дороги: линии остаются чёткими. Источник: '+fileName+'.',false,true);
+  if(saved){$('copy').disabled=false;$('clear').disabled=false;map.getSource('picked')?.setData(markers());}
+ });
+ map.on('click',evt=>{
+  latestPoint=[evt.lngLat.lng,evt.lngLat.lat];
+  map.getSource('picked')?.setData(markers());
+  $('copy').disabled=false;$('clear').disabled=false;
+  new maplibregl.Popup({closeButton:true}).setLngLat(latestPoint).setText('Метка: '+latestPoint.map(v=>v.toFixed(5)).join(', ')).addTo(map);
+ });
+ map.on('click','poi',evt=>{
+  const ft=evt.features?.[0];
+  if(ft){const name=ft.properties?.name||ft.properties?.sprite||'Объект ETS2';new maplibregl.Popup().setLngLat(evt.lngLat).setText(name).addTo(map);}
+ });
+ map.on('error',evt=>{
+  const reason=evt.error?.message||String(evt.error||'');
+  console.error('Vector map error:',reason);
+  if(!$('welcome').classList.contains('hidden'))notify('Не удалось отобразить карту: '+reason.slice(0,190),true);
+ });
+}
+async function loadFile(file,persist){
+ if(!file)return;
+ if(!/\.pmtiles$/i.test(file.name||''))return notify('Нужен файл с расширением .pmtiles.',true);
+ notify('Читаю заголовок PMTiles и слои векторной карты…');
+ try{
+  if(!window.maplibregl||!window.pmtiles)throw Error('Не загрузились библиотеки MapLibre или PMTiles. Проверь интернет.');
+  const src=new pmtiles.FileSource(file),pm=new pmtiles.PMTiles(src);
+  const [head,meta]=await Promise.all([pm.getHeader(),pm.getMetadata()]);
+  if(head.tileType!==1)throw Error('Файл содержит не векторные тайлы. Нужен ETS2 PMTiles из релиза OpenHaul.');
+  const layers=(meta.vector_layers||[]).map(x=>String(x.id||'')).filter(Boolean);
+  const layer=['ets2','europe'].find(x=>layers.includes(x))||layers[0];
+  if(!layer)throw Error('В архиве отсутствует векторный слой. Проверь выбранный файл.');
+  activeFileName=file.name;
+  initializeMap(pm,src,layer,file.name);
+  if(persist){try{await saveStored(file);}catch(err){notify('Карта открыта, но сохранение в браузере не удалось: '+err.message,true);}}
+ }catch(err){notify('Ошибка: '+err.message,true);console.error(err);}
+}
+$('file').addEventListener('change',e=>loadFile(e.target.files?.[0],true));
+$('zoom-city').addEventListener('click',()=>map?map.zoomTo(Math.min(22,map.getZoom()+2),{duration:350}):notify('Сначала загрузите карту .pmtiles.'));
+$('zoom-home').addEventListener('click',()=>map?map.flyTo({center:[15,51],zoom:4.7}):notify('Сначала загрузите карту .pmtiles.'));
+$('clear').addEventListener('click',()=>{
+ latestPoint=null;
+ if(map?.getSource('picked'))map.getSource('picked').setData(markers());
+ $('copy').disabled=$('clear').disabled=true;
+});
+$('copy').addEventListener('click',async()=>{
+ if(!latestPoint||!map)return;
+ const url=new URL(location.href);url.searchParams.set('lon',latestPoint[0].toFixed(6));
+ url.searchParams.set('lat',latestPoint[1].toFixed(6));url.searchParams.set('z',map.getZoom().toFixed(2));
+ try{await navigator.clipboard.writeText(url.toString());notify('Ссылка на выбранную точку скопирована.',false,true);}
+ catch{window.prompt('Скопируй ссылку:',url.toString());}
+});
+const mapbox=$('mapbox');
+mapbox.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';});
+mapbox.addEventListener('drop',e=>{e.preventDefault();const file=[...e.dataTransfer.files].find(f=>/\.pmtiles$/i.test(f.name));if(file)loadFile(file,true);else notify('Перетащи файл ETS2 с расширением .pmtiles.',true);});
+async function loadBundledMap(){
+ const asset=new URL('./assets/ets2.pmtiles',location.href).toString();
+ if(!window.pmtiles||!window.maplibregl)throw Error('Не загрузились браузерные библиотеки карты');
+ // FetchSource requests byte ranges, so the browser does not need to load the entire archive at once.
+ const pm=new pmtiles.PMTiles(asset);
+ const [header,metadata]=await Promise.all([pm.getHeader(),pm.getMetadata()]);
+ if(header.tileType!==1)throw Error('Опубликованный PMTiles не является векторной картой');
+ const layers=(metadata.vector_layers||[]).map(item=>String(item.id||'')).filter(Boolean);
+ const layer=['ets2','europe'].find(key=>layers.includes(key))||layers[0];
+ if(!layer)throw Error('В готовой карте нет векторных слоёв ETS2');
+ initializeMap(pm,asset,layer,'ETS2 · встроенный PMTiles');
+ $('assetStatus').textContent='Карта найдена в проекте. Ручная загрузка не требуется.';
+ $('assetStatus').className='info success';
+}
+(async()=>{
+ try{
+  notify('Загружаю встроенную векторную карту…');
+  await loadBundledMap();
+ }catch(err){
+  console.error('Bundled map unavailable:',err);
+  $('assetStatus').textContent='Встроенная карта пока недоступна: '+err.message;
+  $('assetStatus').className='info error';
+  notify('Карта ещё не опубликована или не отвечает. Можно открыть резервную растровую карту.',true);
+  try{
+   const saved=await getStored();
+   if(saved?.data){
+    const file=new File([saved.data],saved.name||'ets2.pmtiles',{type:'application/octet-stream'});
+    await loadFile(file,false);
+   }
+  }catch{}
+ }
 })();
-</script></body></html>
+})();
+</script>
+</body>
+</html>
