@@ -1,5 +1,6 @@
 """Ensure POI enrichment can be done from cached graph/parser outputs only."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -35,7 +36,8 @@ class CachedPoiExportTests(unittest.TestCase):
             result=subprocess.run([
                 sys.executable,str(script),'--repack-only',
                 '--toolchain-dir',str(root),'--output',str(output)
-            ],capture_output=True,text=True)
+            ],capture_output=True,text=True,encoding='utf-8',
+               env={**os.environ, 'PYTHONIOENCODING':'utf-8'})
             self.assertEqual(result.returncode,0,msg=result.stdout+'\n'+result.stderr)
             data=json.loads(output.read_text(encoding='utf-8'))
             self.assertEqual(len(data['pois']),1)
