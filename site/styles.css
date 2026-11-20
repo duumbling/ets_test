@@ -70,3 +70,18 @@
   .poi-tooltip{max-width:180px}
   .map-bottom .legend span:nth-child(3){display:none}
 }
+
+/* Clear two-file import flow */
+.map-import-step{border:1px solid #30495c;background:#0f1e2d;border-radius:11px;
+  padding:13px;margin-top:13px}
+.map-step-heading{display:flex;align-items:center;gap:10px;color:#e5f3f8}
+.map-step-number{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;
+  border-radius:50%;background:#1c806c;color:#fff;font-size:13px;font-weight:800}
+.map-step-heading strong{display:block;font-size:13px}
+.map-step-heading small{display:block;color:#9fb6c5;font-size:11px;margin-top:3px}
+.map-import-step>p{font-size:11px;color:#a9becb;line-height:1.5;margin:9px 0}
+.map-import-step input[type=file]{display:block;width:100%;max-width:100%;font:inherit;
+  font-size:11px;color:#cbdce5;margin-top:7px}
+.map-import-step .hint{overflow-wrap:anywhere}
+.map-import-step code{font-size:10px;color:#aee8d7}
+.detail-uploader.map-import-step{border-top:0;margin-top:13px;padding-top:13px}
