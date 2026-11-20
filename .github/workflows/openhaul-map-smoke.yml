@@ -1,0 +1,20 @@
+name: Verify downloadable OpenHaul ETS2 map
+
+on:
+  push:
+    paths:
+      - 'tools/check_openhaul_release.py'
+      - '.github/workflows/openhaul-map-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  map-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate ready-made ETS2 PMTiles file and layer metadata
+        run: python3 tools/check_openhaul_release.py
