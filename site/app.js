@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const S = {
-    graph: null, realPack: null, roadCache: null, routeMeters: 0, nodes: [], pois: [], poiIndex: null, visiblePois: [], nodesById: new Map(), adj: new Map(),
+    graph: null, realPack: null, roadCache: null, roadVectors: null, routeMeters: 0, nodes: [], pois: [], poiIndex: null, visiblePois: [], nodesById: new Map(), adj: new Map(),
     start: 'berlin', end: 'paris', via: [], route: [],
     zoom: 1, panX: 0, panY: 0, width: 0, height: 0, dpr: 1,
     dragging: false, dragFrom: null, moved: false, pointer: null, live: null,
@@ -102,10 +102,7 @@
     if(!poi)return;
     S.end=poi.id;
     selectOptions('finishSelect',S.end);
-    S.zoom=Math.max(S.zoom,3);
-    const b=bounds(),scale=b.scale*S.zoom;
-    S.panX=-(poi.x-b.cx)*scale;
-    S.panY=-(poi.z-b.cz)*scale;
+    centerOn(poi, 90);
     buildRoute();
   }
   function updatePoiResults() {
@@ -143,6 +140,31 @@
       list.append(hint);
     }
   }
+  function centerOn(point,requestedZoom=90){
+    if(!point)return;
+    const b=bounds();
+    S.zoom=Math.min(S.realPack?360:12,Math.max(S.zoom,requestedZoom));
+    const scale=b.scale*S.zoom;
+    S.panX=-(point.x-b.cx)*scale;S.panY=-(point.z-b.cz)*scale;
+    render();
+  }
+  function showSelectedCity(){
+    const target=S.nodesById.get(S.end)||S.nodesById.get(S.start)||S.nodes[0];
+    if(!target)return;
+    const b=bounds();
+    // Roughly 5000m of game-world horizontal span, enough to show a city.
+    const cityZoom=S.realPack
+      ?Math.max(25,Math.min(320,(S.width-100)/(5000*b.scale)))
+      :6;
+    centerOn(target,cityZoom);
+  }
+  function viewRect(){
+    const b=bounds(),scale=b.scale*S.zoom;
+    const left=S.width/2+S.panX,top=S.height/2+S.panY;
+    return {minX:b.cx+(-30-left)/scale,maxX:b.cx+(S.width+30-left)/scale,
+      minZ:b.cz+(-30-top)/scale,maxZ:b.cz+(S.height+30-top)/scale,
+      left,top,cx:b.cx,cz:b.cz,scale};
+  }
   function resize() {
     const rect=canvas.getBoundingClientRect();
     S.width=rect.width; S.height=rect.height;S.dpr=Math.min(window.devicePixelRatio||1,2);
@@ -179,7 +201,9 @@
     ctx.strokeStyle='#172b37';ctx.lineWidth=.6;
     for(let x=0;x<W;x+=52){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
     for(let y=0;y<H;y+=52){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    if (S.roadCache) {
+    if (S.realPack && S.zoom>=6 && S.roadVectors) {
+      S.roadVectors.draw(ctx,viewRect(),'#496779',S.zoom>80?3.5:2.6);
+    } else if (S.roadCache) {
       // Rasterized road layer: a single cropped drawImage instead of ~200k
       // individual road segments on every mousemove or telemetry update.
       const bounds = S.realPack.bounds;
@@ -272,7 +296,7 @@
     if(bestPoi){choosePoi(bestPoi);return;}
     const id=nearestCity(x,y);
     if(id){S.end=id;selectOptions('finishSelect',S.end);buildRoute();}}
-  function zoom(by,p){ const old=S.zoom,newZoom=Math.max(.3,Math.min(5,old*by));const k=newZoom/old;
+  function zoom(by,p){ const old=S.zoom,newZoom=Math.max(.3,Math.min(S.realPack?360:12,old*by));const k=newZoom/old;
     const cx=p?.x??S.width/2,cy=p?.y??S.height/2;
     S.panX=cx-S.width/2-(cx-S.width/2-S.panX)*k;
     S.panY=cy-S.height/2-(cy-S.height/2-S.panY)*k;
@@ -340,7 +364,7 @@
   function loadMap(input, isReal) {
     S.realPack=isReal ? window.ETS2RoutePack.normalize(input) : null;
     S.graph=S.realPack || input;
-    S.roadCache=null;
+    S.roadCache=null;S.roadVectors=null;
     if (S.realPack && window.ETS2RoadCache) {
       try {
         // Reduce GPU memory consumption on phones and low-memory computers.
@@ -521,13 +545,21 @@
   $('connectBtn').addEventListener('click',connect);
   $('sessionCode').addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
   $('saveRelay').addEventListener('click',()=>{const v=$('relayUrl').value.trim().replace(/\/$/,'');if(v&&!v.startsWith('wss://')){status('Неверный адрес',false,'Сервер должен начинаться с wss://');return;}S.relayUrl=v;localStorage.setItem('ets2-relay-url',v);status('Адрес сохранён',false,'Теперь можно вводить код подключения.');});
-  $('zoomIn').addEventListener('click',()=>zoom(1.25));$('zoomOut').addEventListener('click',()=>zoom(1/1.25));
+  $('zoomIn').addEventListener('click',()=>zoom(1.6));$('zoomOut').addEventListener('click',()=>zoom(1/1.6));
+  $('zoomCity').addEventListener('click',showSelectedCity);
   $('resetView').addEventListener('click',()=>{S.zoom=1;S.panX=0;S.panY=0;render();});
   for(const [id,category] of Object.entries(window.ETS2POI.categories)){
     $('poiCategory').add(new Option(category.label,id));
   }
+  canvas.addEventListener('dblclick',e=>{
+    e.preventDefault();
+    const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    const id=nearestCity(x,y);
+    if(id){S.end=id;selectOptions('finishSelect',S.end);buildRoute();showSelectedCity();}
+    else zoom(3,{x,y});
+  });
   canvas.addEventListener('pointerdown',onPointerDown);canvas.addEventListener('pointermove',onPointerMove);canvas.addEventListener('pointerup',onPointerUp);
   canvas.addEventListener('pointercancel',()=>{S.dragging=false;});
-  canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoom(e.deltaY<0?1.12:1/1.12,{x:e.clientX-r.left,y:e.clientY-r.top});},{passive:false});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoom(e.deltaY<0?1.24:1/1.24,{x:e.clientX-r.left,y:e.clientY-r.top});},{passive:false});
   new ResizeObserver(resize).observe(canvas);init();
 })();
