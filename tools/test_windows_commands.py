@@ -108,5 +108,26 @@ class MapCliInstallTests(unittest.TestCase):
                 runner.assert_not_called()
 
 
+class BaseOnlyExportTests(unittest.TestCase):
+    def test_base_only_uses_parser_dlc_filter(self):
+        from pathlib import Path
+        with patch.object(build_real_map, 'run') as runner:
+            build_real_map.run_parser_and_graph(
+                Path('maps'), Path('game'), Path('maps/out/parser'),
+                Path('maps/out'), base_only=True)
+        args = runner.call_args_list[0].args
+        self.assertIn('--no-includeDlc', args)
+        self.assertNotIn('--check', runner.call_args_list[1].args)
+        self.assertNotIn('-c', runner.call_args_list[1].args)
+
+    def test_default_export_includes_dlc(self):
+        from pathlib import Path
+        with patch.object(build_real_map, 'run') as runner:
+            build_real_map.run_parser_and_graph(
+                Path('maps'), Path('game'), Path('maps/out/parser'),
+                Path('maps/out'))
+        self.assertNotIn('--no-includeDlc', runner.call_args_list[0].args)
+
+
 if __name__ == '__main__':
     unittest.main()
