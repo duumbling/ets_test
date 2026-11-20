@@ -48,3 +48,25 @@
 .detail-uploader a{display:inline-block;margin-top:6px}
 .map-zoom-info{font-size:11px;color:#97b9cc;margin-top:6px}
 #zoomCity{color:#8eebd0;font-weight:bold}
+
+/* ETS2 Alpha 0.9: legible symbols and honest in-game map scale */
+.poi-symbol-canvas{width:32px;height:32px;flex-shrink:0;display:block}
+.poi-tooltip{position:absolute;z-index:4;max-width:220px;pointer-events:none;
+  color:#f1fbff;background:#14293aee;border:1px solid #6b8998;border-radius:8px;
+  padding:9px 11px;font-size:12px;box-shadow:0 5px 22px #0008;line-height:1.4}
+.poi-tooltip[hidden],.map-scale[hidden]{display:none!important}
+.map-scale{position:absolute;left:30px;bottom:158px;z-index:2;pointer-events:none;
+  color:#bdd2df;font-size:10px;background:#0d1c2bc9;border:1px solid #34495b;
+  border-radius:7px;padding:6px 9px;display:flex;flex-direction:column;gap:5px;
+  max-width:215px}
+.map-scale-bar{height:8px;width:75px;border-bottom:2px solid #cee4ed;
+  border-left:2px solid #cee4ed;border-right:2px solid #cee4ed;display:block}
+.map-bottom .legend{flex-wrap:wrap;max-width:calc(100% - 70px)}
+@media(max-width:860px){
+  .map-scale{left:16px;bottom:125px;max-width:145px}
+}
+@media(max-width:600px){
+  .map-scale{bottom:118px;font-size:9px}
+  .poi-tooltip{max-width:180px}
+  .map-bottom .legend span:nth-child(3){display:none}
+}
