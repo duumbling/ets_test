@@ -5,6 +5,7 @@ on:
     paths:
       - 'tools/build_real_map.py'
       - 'tools/test_windows_commands.py'
+      - 'tools/test_repack_pois.py'
       - 'tools/patch_upstream_sii.py'
       - 'tools/test_sii_patch.py'
       - 'tools/patch_upstream_icons.py'
