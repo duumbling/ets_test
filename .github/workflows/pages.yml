@@ -29,12 +29,14 @@ jobs:
           node --check site/app.js
           node --check site/routepack.js
           node --check site/pois.js
+          node --check site/poi-symbols.js
           node --check site/road-cache.js
           node --check site/road-vectors.js
           node --check site/city-detail.js
           node --check site/map-storage.js
           node tools/test_routepack.js
           node tools/test_pois.js
+          node tools/test_poi_symbols.js
           node tools/test_road_cache.js
           node tools/test_road_vectors.js
           node tools/test_city_detail.js
