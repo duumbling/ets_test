@@ -4,12 +4,12 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,6 +18,36 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Download released ETS2 vector map for this site
+        env:
+          ETS2_MAP_URL: https://github.com/NekoSuneProjects/OpenHaul/releases/download/map-data/ets2-a24c1761d59c69b02cbe811a6ee62d6e8be457b804b1207b9cc86f9d06d8de3e.pmtiles
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          curl --fail --location --silent --show-error --retry 4 --retry-delay 5 --connect-timeout 20 --max-time 420 \
+            "$ETS2_MAP_URL" --output assets/ets2.pmtiles
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          file=Path('assets/ets2.pmtiles')
+          size=file.stat().st_size
+          with file.open('rb') as f:
+              signature=f.read(8)
+          if signature != b'PMTiles\x03' or not 10_000_000 < size < 100_000_000:
+              raise SystemExit(f'Invalid PMTiles archive: signature={signature!r}, size={size}')
+          print('Verified PMTiles v3:',size,'bytes, SHA-256',hashlib.file_digest(file.open('rb'),'sha256').hexdigest())
+          PY
+      - name: Save vetted map archive into repository
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/ets2.pmtiles
+          if ! git diff --cached --quiet; then
+            git commit -m "data: bundle OpenHaul ETS2 vector map for no-download browsing"
+            git push origin HEAD:main
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
