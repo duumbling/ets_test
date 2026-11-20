@@ -90,7 +90,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             npx --no-install tsx ets2-nav-convert.ts city-smoke.geojson city-smoke.json.gz
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            python -c "import gzip,json; p=json.load(gzip.open('city-smoke.json.gz','rt')); assert p['format']=='ets2-city-detail-v1'; assert len(p['geometry'])==2; assert abs(p['geometry'][0][1][2]-100)<2; print('City detail round-trip OK')"
+            python -c "import gzip,json; p=json.load(gzip.open('city-smoke.json.gz','rt')); assert p['format']=='ets2-city-detail-v2'; assert len(p['geometry'])==3; assert [f[0] for f in p['geometry']]==[0,3,1]; assert abs(p['geometry'][0][1][2]-100)<2; assert p['geometry'][0][2]>=7; print('City detail round-trip OK')"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } finally { Pop-Location }
       - name: Check CLI commands without ETS2 installation
