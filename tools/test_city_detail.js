@@ -6,7 +6,7 @@ const test={format:FORMAT,coordinateSystem:'ets2',geometry:[
   [1,[0,0,10,0,10,10,0,10,0,0]],       // intersection polygon
   [2,[500,500,550,500,550,550,500,550]],
   [0,[1500,1500,1800,1700],8],
-  [3,[0,0,10,10,10,0,0,10],9],          // synthetic prefab lines (rhombi)
+  [3,[0,0,10,10,10,0,0,10],9],          // real prefab connector roads
 ]};
 assert.equal(normalize(test).features.length,5);
 assert.equal(normalize(test).counters.prefabLines,1);
@@ -19,12 +19,15 @@ assert.deepEqual(layer.query(-20,-20,30,30).map(f=>f.kind),[0,1,3]);
 assert.equal(layer.query(1200,1200,2000,2000).length,1);
 assert.equal(layer.query(1200,1200,1300,1300).length,0);
 let paths=0,strokes=0,fills=0;
-const ctx={save(){},restore(){},beginPath(){},moveTo(){paths++;},lineTo(){},closePath(){},stroke(){strokes++;},fill(){fills++;}};
+const order=[];
+const ctx={save(){},restore(){},beginPath(){},moveTo(){paths++;},lineTo(){},closePath(){},
+  stroke(){strokes++;order.push('stroke');},fill(){fills++;order.push('fill');}};
 assert.equal(layer.draw(ctx,{minX:-20,minZ:-20,maxX:30,maxZ:30,left:50,top:50,cx:0,cz:0,scale:2}),3);
-assert.equal(strokes,2,'road casing and surface drawn separately');
-assert.equal(fills,2,'map area and prefab road surface');
-assert.equal(paths,2,'synthetic prefab diamond lines must NOT be rendered');
+assert.equal(strokes,4,'ordinary roads and prefab connectors both receive casing and surface');
+assert.equal(fills,2,'map area and prefab road surface are filled first');
+assert.equal(paths,3,'ordinary road, prefab polygon and prefab connector are all traced');
+assert.ok(order.indexOf('fill')<order.indexOf('stroke'),'junction surface must be painted below connecting roads');
 const legacy=create({...test,format:LEGACY_FORMAT,geometry:test.geometry.slice(0,4).map(v=>v.slice(0,2))},200);
 assert.equal(legacy.isLegacy,true);
 assert.equal(legacy.counters.prefabLines,0);
-console.log('Detailed city v2 geometry: real roads and polygons, hidden prefab diamonds, v1 compatibility');
+console.log('Detailed city v2 geometry: ordinary roads + prefab connectors visible above surfaces; v1 compatibility');
