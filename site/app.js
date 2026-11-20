@@ -201,6 +201,11 @@
     ctx.strokeStyle='#172b37';ctx.lineWidth=.6;
     for(let x=0;x<W;x+=52){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
     for(let y=0;y<H;y+=52){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    if(S.realPack && S.zoom>=6 && !S.roadVectors && window.ETS2VectorRoads) {
+      try {
+        S.roadVectors=window.ETS2VectorRoads.indexSegments(S.realPack.points,S.realPack.roads);
+      } catch(error){console.warn('High zoom road index could not be built',error);}
+    }
     if (S.realPack && S.zoom>=6 && S.roadVectors) {
       S.roadVectors.draw(ctx,viewRect(),'#496779',S.zoom>80?3.5:2.6);
     } else if (S.roadCache) {
