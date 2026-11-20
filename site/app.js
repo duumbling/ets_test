@@ -143,7 +143,7 @@
   function centerOn(point,requestedZoom=90){
     if(!point)return;
     const b=bounds();
-    S.zoom=Math.min(S.realPack?360:12,Math.max(S.zoom,requestedZoom));
+    S.zoom=Math.min(S.realPack?1500:12,Math.max(S.zoom,requestedZoom));
     $('zoomInfo').textContent='Масштаб '+Math.round(S.zoom)+'×';
     const scale=b.scale*S.zoom;
     S.panX=-(point.x-b.cx)*scale;S.panY=-(point.z-b.cz)*scale;
@@ -153,9 +153,9 @@
     const target=S.nodesById.get(S.end)||S.nodesById.get(S.start)||S.nodes[0];
     if(!target)return;
     const b=bounds();
-    // Roughly 5000m of game-world horizontal span, enough to show a city.
+    // Fit about 2,600 in-game map units horizontally: a useful city-scale view.
     const cityZoom=S.realPack
-      ?Math.max(25,Math.min(320,(S.width-100)/(5000*b.scale)))
+      ?Math.max(25,Math.min(800,(S.width-100)/(2600*b.scale)))
       :6;
     centerOn(target,cityZoom);
   }
@@ -182,6 +182,19 @@
     return {cx:(minX+maxX)/2,cz:(minZ+maxZ)/2,scale:Math.max(.01,Math.min((S.width-110)/(maxX-minX||1),(S.height-200)/(maxZ-minZ||1)))};
   }
   function toScreen(x,z){ const b=bounds(),s=b.scale*S.zoom;return {x:S.width/2+S.panX+(x-b.cx)*s,y:S.height/2+S.panY+(z-b.cz)*s}; }
+  function updateScale(){
+    const bar=$('mapScaleBar'),label=$('mapScaleLabel');
+    if(!S.width||!S.height||!S.nodes.length)return;
+    const pxPerUnit=bounds().scale*S.zoom;
+    // These are in-game coordinate units, not road kilometres or real metres.
+    const values=[1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000];
+    let chosen=values[0];
+    for(const amount of values)if(amount*pxPerUnit<=130)chosen=amount;
+    const pixels=Math.max(2,chosen*pxPerUnit);
+    bar.style.width=pixels.toFixed(1)+'px';
+    label.textContent=chosen.toLocaleString('ru-RU')+' ед. карты';
+    $('mapScale').hidden=false;
+  }
   function drawLine(points,color,width,dash=[]) {
     if(points.length<2)return;
     ctx.beginPath();points.forEach((n,i)=>{const p=toScreen(n.x,n.z);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});
@@ -198,10 +211,14 @@
     const W=S.width,H=S.height;
     ctx.clearRect(0,0,W,H);
     const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#0a1723');g.addColorStop(.55,'#0e1d2b');g.addColorStop(1,'#0a1521');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-    // grid is decorative and is NOT a geographical base map.
-    ctx.strokeStyle='#172b37';ctx.lineWidth=.6;
-    for(let x=0;x<W;x+=52){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-    for(let y=0;y<H;y+=52){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // The overview grid is decorative. Hide it on city maps to avoid a
+    // false impression of road blocks or exaggerated physical distances.
+    if(S.zoom<6){
+      ctx.strokeStyle='#172b37';ctx.lineWidth=.6;
+      for(let x=0;x<W;x+=52){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      for(let y=0;y<H;y+=52){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    }
+    updateScale();
     if(S.realPack && S.zoom>=6 && !S.roadVectors && window.ETS2VectorRoads) {
       try {
         S.roadVectors=window.ETS2VectorRoads.indexSegments(S.realPack.points,S.realPack.roads);
@@ -238,6 +255,9 @@
     if(routeNodes.length>1){ctx.shadowColor='#45e0a7';ctx.shadowBlur=15;drawLine(routeNodes,'#6de2b0',5);ctx.shadowBlur=0;}
     const marked=new Set([S.start,S.end,...S.via]);
     for(const n of S.nodes){
+      // At street level city-centre markers can fall outside the road grid;
+      // do not litter detailed streets with non-destination city dots.
+      if(S.realPack&&S.zoom>14&&!marked.has(n.id))continue;
       const p=toScreen(n.x,n.z);
       if(p.x < -100||p.x>W+100||p.y < -100||p.y>H+100)continue;
       const selected=marked.has(n.id),isStart=n.id===S.start,isEnd=n.id===S.end;
@@ -304,7 +324,7 @@
     if(bestPoi){choosePoi(bestPoi);return;}
     const id=nearestCity(x,y);
     if(id){S.end=id;selectOptions('finishSelect',S.end);buildRoute();}}
-  function zoom(by,p){ const old=S.zoom,newZoom=Math.max(.3,Math.min(S.realPack?360:12,old*by));const k=newZoom/old;
+  function zoom(by,p){ const old=S.zoom,newZoom=Math.max(.3,Math.min(S.realPack?1500:12,old*by));const k=newZoom/old;
     const cx=p?.x??S.width/2,cy=p?.y??S.height/2;
     S.panX=cx-S.width/2-(cx-S.width/2-S.panX)*k;
     S.panY=cy-S.height/2-(cy-S.height/2-S.panY)*k;
@@ -430,8 +450,11 @@
     const parsed=JSON.parse(raw);
     const layer=window.ETS2CityDetail.create(parsed);
     S.cityDetail=layer;
-    $('detailStatus').textContent='Подробная геометрия загружена: '+layer.count+
-      ' дорожных участков и территорий. Приблизь город до 6× или воспользуйся кнопкой ⌕.';
+    $('detailStatus').textContent='Подробная геометрия: '+layer.count+
+      ' элементов. '+(layer.isLegacy
+        ? 'Это старый формат: для исправленных перекрёстков пересобери файл подробной карты.'
+        : 'Технические линии перекрёстков отделены ('+layer.counters.prefabLines+') и не рисуются как улицы.')+
+      ' Для просмотра города нажми кнопку ⌕.';
     if(isNewImport){
       const active=localStorage.getItem(ACTIVE_MAP_KEY);
       if(active&&window.ETS2MapStorage){
