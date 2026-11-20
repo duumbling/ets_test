@@ -20,7 +20,7 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.9</span></div>
+      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 1.0</span></div>
       <div id="connectionPill" class="connection-pill"><span class="dot"></span><span id="connectionLabel">Не подключено</span></div>
     </header>
     <main class="layout">
@@ -43,6 +43,13 @@
           <div class="inline-input"><input id="sessionCode" type="text" autocomplete="off" spellcheck="false" maxlength="14" placeholder="12 символов"><button id="connectBtn" class="primary">Подключить</button></div>
           <p id="connectionHint" class="hint" aria-live="polite">Маршруты доступны без подключения. Для живых данных потребуется мост и сервер-посредник.</p>
           <details class="settings" id="relaySettings" hidden><summary>Настройки интернет-сервера</summary><label for="relayUrl">Адрес WebSocket-сервера</label><input id="relayUrl" type="url" spellcheck="false" placeholder="wss://your-worker.workers.dev"><button id="saveRelay" class="secondary small">Сохранить адрес</button></details>
+        </section>
+        <section class="panel">
+          <div class="eyebrow">НОВЫЙ СПОСОБ · БЕЗ ИГРОВЫХ АРХИВОВ</div>
+          <h2>Готовая карта ETS2 онлайн</h2>
+          <p class="muted">Используй опубликованные карты ETS2 1.62 с DLC, дорожные графы и POI без установки Node.js, Python и без сканирования игры. Есть отдельные варианты ProMods для ETS2 1.61.</p>
+          <a class="file-label online-map-link" href="online-map.html">Открыть готовую карту</a>
+          <p class="hint">Экспериментальный режим: получает данные со стороннего сервера Truck Dash. Обычный навигатор и твои личные карты остаются доступны ниже.</p>
         </section>
         <section class="panel map-import-panel">
           <div class="eyebrow">НАСТРОЙКА КАРТЫ · 2 ФАЙЛА</div>
