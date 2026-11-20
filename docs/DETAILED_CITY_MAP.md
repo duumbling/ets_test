@@ -14,6 +14,7 @@
 Убедись, что в твоей папке `E:\ets_test\tools` есть два новых файла из GitHub:
 - `build_city_detail.py`
 - `ets2-nav-convert.ts`
+- `patch_upstream_geojson.py`
 
 В CMD выполни:
 
@@ -35,6 +36,18 @@ py tools\build_city_detail.py
 ```cmd
 py tools\build_city_detail.py --output "E:\ets_test\ets2-city-detail.json.gz"
 ```
+
+## Если экспорт остановился на `geo-json/map.ts:1081`
+
+У некоторых комбинаций DLC внутренняя функция `ferryToFeature()` из `truckermudgeon/maps` не может вычислить `dlcGuard` для парома и выбрасывает `assertExists`. Наш подробный слой содержит дороги и геометрию префабов, **а не паромные линии**, поэтому сборщик теперь локально отключает только экспорт паромов. Обычная маршрутизация и дорожная топология от этого не меняются.
+
+Если исходники локального сборщика старые, обнови **`build_city_detail.py`** и **`patch_upstream_geojson.py`** из GitHub. `ets2-nav-convert.ts` при этом можно оставить прежним. Затем повтори:
+
+```cmd
+py tools\build_city_detail.py
+```
+
+Исправление затрагивает только временно скачанную локальную копию `truckermudgeon/maps`, не архивы игры.
 
 ## 2. Как открыть полноценную городскую карту
 
