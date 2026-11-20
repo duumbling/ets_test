@@ -46,33 +46,34 @@ label{display:block;font-size:12px;font-weight:700;color:#dce7f3;margin-bottom:9
 <div class="app">
 <aside class="sidebar">
 <div class="brand">↗ ETS2 ATLAS <small>ВЕКТОРНАЯ КАРТА · BETA</small></div>
-<a class="back" href="./">← Растровая карта (запасной вариант)</a>
+<a class="back" href="raster.html">← Растровая карта (запасной вариант)</a>
 <div><div class="pill">Высокая детализация</div><h1>Дороги остаются чёткими при приближении</h1><p>Векторная геометрия ETS2 без растянутых PNG. Для работы нужна готовая карта формата PMTiles, опубликованная OpenHaul.</p></div>
 <div class="section">
-<div class="step"><span>1</span> Получить векторную карту</div>
-<a class="button" href="https://github.com/NekoSuneProjects/OpenHaul/releases/download/map-data/ets2-a24c1761d59c69b02cbe811a6ee62d6e8be457b804b1207b9cc86f9d06d8de3e.pmtiles" target="_blank" rel="noopener noreferrer">Скачать ETS2 PMTiles · 22,6 МБ</a>
-<p style="margin-top:9px">Источник — релиз <a href="https://github.com/NekoSuneProjects/OpenHaul/releases/tag/map-data" style="color:#e1c899" target="_blank" rel="noopener">OpenHaul</a>. Карта хранится у тебя, на наш сервер не загружается.</p>
+<div class="step"><span>1</span> Карта уже включена в приложение</div>
+<p>Векторный архив ETS2 устанавливается автоматически при публикации проекта. Никаких файлов скачивать и выбирать вручную не нужно.</p>
+<div class="info" id="assetStatus" style="margin-top:12px">Проверяю встроенную карту…</div>
 </div>
 <div class="section">
-<div class="step"><span>2</span> Открыть скачанный файл</div>
-<label for="file">Выбери файл .pmtiles или перетащи его в область карты</label>
+<details><summary style="cursor:pointer;font-size:12px;color:#b8c9d8">Резервный вариант: открыть свой PMTiles</summary>
+<p style="margin:10px 0">Если карта не загрузилась, можно использовать локальный архив. Ручная загрузка не обязательна для нормальной работы.</p>
+<label for="file">Выбрать файл .pmtiles</label>
 <input id="file" type="file" accept=".pmtiles,application/octet-stream">
-<p style="margin-top:10px">Файл автоматически сохраняется в браузере. Повторно выбирать его при следующих посещениях не потребуется, пока не очищены данные сайта.</p>
+</details>
 </div>
 <div class="section">
-<div class="step"><span>3</span> Изучать карту</div>
+<div class="step"><span>2</span> Изучать карту</div>
 <div class="controls"><button id="zoom-city" class="button ghost" type="button">Приблизить +</button><button id="zoom-home" class="button ghost" type="button">Вся Европа</button></div>
 <p style="margin-top:10px">Колесо мыши и жесты масштабируют карту. Клик ставит метку, по которой можно скопировать ссылку.</p>
 <div class="controls" style="margin-top:12px"><button id="copy" class="button ghost" disabled type="button">Ссылка на точку</button><button id="clear" class="button ghost" disabled type="button">Убрать метку</button></div>
 </div>
-<div class="info" id="status" role="status" aria-live="polite">Проверяю сохранённую карту…</div>
+<div class="info" id="status" role="status" aria-live="polite">Проверяю встроенную карту ETS2…</div>
 <div class="note">Векторная карта не гарантирует полное покрытие актуальных DLC и сторонних модов (ProMods, RusMap). Пока это просмотрщик дорог и городов, не GPS: точные маршруты требуют отдельного дорожного графа.</div>
-<div class="foot">© SCS Software — игровые данные. Источник векторных файлов: <a href="https://github.com/NekoSuneProjects/OpenHaul">OpenHaul</a> / TruckSim Maps. Библиотеки: MapLibre GL JS и PMTiles. Этот проект не связан с SCS Software.</div>
+<div class="foot">© SCS Software — игровые данные. Источник векторных файлов: <a href="https://github.com/NekoSuneProjects/OpenHaul">OpenHaul</a> / TruckSim Maps. Библиотеки: MapLibre GL JS и PMTiles. Этот проект не связан с SCS Software. Сайт GitHub Pages публичный, даже если используется лично.</div>
 </aside>
 <main class="mapbox" id="mapbox">
 <div id="map" class="map"></div>
 <div class="overlay"><strong>ETS2 · ВЕКТОРНАЯ КАРТА</strong><small id="mapmeta">Ожидание PMTiles · доступен масштаб до 22</small></div>
-<div class="welcome" id="welcome"><div><h2>Подробная карта ETS2</h2><p>Скачай готовый файл в меню слева и выбери его. Разметка дорог будет рисоваться векторно, без растягивания PNG.</p></div></div>
+<div class="welcome" id="welcome"><div><h2>Подробная карта ETS2</h2><p>Картографические данные подгружаются автоматически из этого сайта. Можно сразу увеличивать дороги и перекрёстки.</p></div></div>
 </main>
 </div>
 <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
@@ -129,7 +130,7 @@ function makeStyle(layer,url){
  };
 }
 function initializeMap(pm,source,layer,fileName){
- const sourceURL='pmtiles://'+source.getKey();
+ const sourceURL='pmtiles://'+(typeof source==='string'?source:source.getKey());
  if(map){map.remove();map=null;}
  if(!protocol){protocol=new pmtiles.Protocol();maplibregl.addProtocol('pmtiles',protocol.tile);}
  protocol.add(pm);fileMap=pm;
@@ -147,7 +148,7 @@ function initializeMap(pm,source,layer,fileName){
  map.on('load',()=>{
   $('welcome').classList.add('hidden');
   $('mapmeta').textContent=fileName+' · вектор · масштаб до 22';
-  notify('Векторная карта загружена. Приближай дороги: их линии остаются чёткими. Данные считаны локально из '+fileName+'.',false,true);
+  notify('Векторная карта загружена. Приближай дороги: линии остаются чёткими. Источник: '+fileName+'.',false,true);
   if(saved){$('copy').disabled=false;$('clear').disabled=false;map.getSource('picked')?.setData(markers());}
  });
  map.on('click',evt=>{
@@ -201,14 +202,37 @@ $('copy').addEventListener('click',async()=>{
 const mapbox=$('mapbox');
 mapbox.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';});
 mapbox.addEventListener('drop',e=>{e.preventDefault();const file=[...e.dataTransfer.files].find(f=>/\.pmtiles$/i.test(f.name));if(file)loadFile(file,true);else notify('Перетащи файл ETS2 с расширением .pmtiles.',true);});
+async function loadBundledMap(){
+ const asset=new URL('./assets/ets2.pmtiles',location.href).toString();
+ if(!window.pmtiles||!window.maplibregl)throw Error('Не загрузились браузерные библиотеки карты');
+ // FetchSource requests byte ranges, so the browser does not need to load the entire archive at once.
+ const pm=new pmtiles.PMTiles(asset);
+ const [header,metadata]=await Promise.all([pm.getHeader(),pm.getMetadata()]);
+ if(header.tileType!==1)throw Error('Опубликованный PMTiles не является векторной картой');
+ const layers=(metadata.vector_layers||[]).map(item=>String(item.id||'')).filter(Boolean);
+ const layer=['ets2','europe'].find(key=>layers.includes(key))||layers[0];
+ if(!layer)throw Error('В готовой карте нет векторных слоёв ETS2');
+ initializeMap(pm,asset,layer,'ETS2 · встроенный PMTiles');
+ $('assetStatus').textContent='Карта найдена в проекте. Ручная загрузка не требуется.';
+ $('assetStatus').className='info success';
+}
 (async()=>{
  try{
-  const saved=await getStored();
-  if(saved?.data){
-   const file=new File([saved.data],saved.name||'ets2.pmtiles',{type:'application/octet-stream'});
-   await loadFile(file,false);
-  }else notify('Скачай архив ETS2 PMTiles и выбери его слева. После загрузки файл сохранится в браузере.');
- }catch(err){notify('Выбери скачанный архив .pmtiles слева. Автосохранение в этом браузере недоступно.');}
+  notify('Загружаю встроенную векторную карту…');
+  await loadBundledMap();
+ }catch(err){
+  console.error('Bundled map unavailable:',err);
+  $('assetStatus').textContent='Встроенная карта пока недоступна: '+err.message;
+  $('assetStatus').className='info error';
+  notify('Карта ещё не опубликована или не отвечает. Можно открыть резервную растровую карту.',true);
+  try{
+   const saved=await getStored();
+   if(saved?.data){
+    const file=new File([saved.data],saved.name||'ets2.pmtiles',{type:'application/octet-stream'});
+    await loadFile(file,false);
+   }
+  }catch{}
+ }
 })();
 })();
 </script>
