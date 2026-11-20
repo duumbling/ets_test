@@ -67,7 +67,7 @@ label{display:block;font-size:12px;font-weight:700;color:#dce7f3;margin-bottom:9
 </div>
 <div class="info" id="status" role="status" aria-live="polite">Проверяю сохранённую карту…</div>
 <div class="note">Векторная карта не гарантирует полное покрытие актуальных DLC и сторонних модов (ProMods, RusMap). Пока это просмотрщик дорог и городов, не GPS: точные маршруты требуют отдельного дорожного графа.</div>
-<div class="foot">© SCS Software — игровые данные. Источник векторных файлов: <a href="https://github.com/NekoSuneProjects/OpenHaul">OpenHaul</a> / TruckSim Maps. Библиотеки: MapLibre GL JS, PMTiles и Proj4. Этот проект не связан с SCS Software.</div>
+<div class="foot">© SCS Software — игровые данные. Источник векторных файлов: <a href="https://github.com/NekoSuneProjects/OpenHaul">OpenHaul</a> / TruckSim Maps. Библиотеки: MapLibre GL JS и PMTiles. Этот проект не связан с SCS Software.</div>
 </aside>
 <main class="mapbox" id="mapbox">
 <div id="map" class="map"></div>
@@ -77,13 +77,11 @@ label{display:block;font-size:12px;font-weight:700;color:#dce7f3;margin-bottom:9
 </div>
 <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
-<script src="https://unpkg.com/proj4@2.15.0/dist/proj4.js"></script>
 <script>
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
 let map=null, protocol=null, fileMap=null, latestPoint=null, activeFileName='';
-const EARTH=6370997,DEGREE=EARTH*Math.PI/180;
 function notify(text,error=false,success=false){
  const e=$('status');e.textContent=text;e.className='info'+(error?' error':success?' success':'');
 }
@@ -130,8 +128,8 @@ function makeStyle(layer,url){
   ]
  };
 }
-function initializeMap(pm,layer,fileName){
- const sourceURL='pmtiles://'+pm.source.getKey();
+function initializeMap(pm,source,layer,fileName){
+ const sourceURL='pmtiles://'+source.getKey();
  if(map){map.remove();map=null;}
  if(!protocol){protocol=new pmtiles.Protocol();maplibregl.addProtocol('pmtiles',protocol.tile);}
  protocol.add(pm);fileMap=pm;
@@ -173,7 +171,7 @@ async function loadFile(file,persist){
  if(!/\.pmtiles$/i.test(file.name||''))return notify('Нужен файл с расширением .pmtiles.',true);
  notify('Читаю заголовок PMTiles и слои векторной карты…');
  try{
-  if(!window.maplibregl||!window.pmtiles||!window.proj4)throw Error('Не загрузились библиотеки MapLibre, PMTiles или Proj4. Проверь интернет.');
+  if(!window.maplibregl||!window.pmtiles)throw Error('Не загрузились библиотеки MapLibre или PMTiles. Проверь интернет.');
   const src=new pmtiles.FileSource(file),pm=new pmtiles.PMTiles(src);
   const [head,meta]=await Promise.all([pm.getHeader(),pm.getMetadata()]);
   if(head.tileType!==1)throw Error('Файл содержит не векторные тайлы. Нужен ETS2 PMTiles из релиза OpenHaul.');
@@ -181,7 +179,7 @@ async function loadFile(file,persist){
   const layer=['ets2','europe'].find(x=>layers.includes(x))||layers[0];
   if(!layer)throw Error('В архиве отсутствует векторный слой. Проверь выбранный файл.');
   activeFileName=file.name;
-  initializeMap(pm,layer,file.name);
+  initializeMap(pm,src,layer,file.name);
   if(persist){try{await saveStored(file);}catch(err){notify('Карта открыта, но сохранение в браузере не удалось: '+err.message,true);}}
  }catch(err){notify('Ошибка: '+err.message,true);console.error(err);}
 }
