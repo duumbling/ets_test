@@ -31,7 +31,7 @@ jobs:
           node --check site/pois.js
           node --check site/poi-symbols.js
           node --check site/remote-graph.js
-          node --check site/online-map.js
+          node --check site/ready-map.js
           node --check site/road-cache.js
           node --check site/road-vectors.js
           node --check site/city-detail.js
