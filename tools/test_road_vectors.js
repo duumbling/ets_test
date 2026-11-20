@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {indexSegments}=require('../site/road-vectors.js');
+const points=[[0,0],[100,0],[100,100],[0,100],[9000,9000]];
+const roads=[[0,1],[1,2],[2,3],[3,0],[0,4]];
+const idx=indexSegments(points,roads,200);
+const topLeft=idx.query(-10,-10,200,200);
+assert.deepEqual(new Set(topLeft),new Set([0,1,2,3,4]));
+const far=idx.query(8800,8800,9100,9100);
+assert.ok(far.includes(4),'long road should be visible at its other end');
+let moves=0,lines=0,strokes=0;
+const ctx={save(){},restore(){},beginPath(){},moveTo(){moves++;},lineTo(){lines++;},stroke(){strokes++;}};
+const n=idx.draw(ctx,{minX:-20,minZ:-20,maxX:200,maxZ:200,left:300,top:300,cx:50,cz:50,scale:2});
+assert.ok(n>=4);assert.ok(moves>=4);assert.equal(strokes,1);
+assert.ok(lines>=4);
+console.log('City zoom vector road index tests passed');
