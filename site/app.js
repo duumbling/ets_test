@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const S = {
-    graph: null, realPack: null, routeMeters: 0, nodes: [], nodesById: new Map(), adj: new Map(),
+    graph: null, realPack: null, roadCache: null, routeMeters: 0, nodes: [], nodesById: new Map(), adj: new Map(),
     start: 'berlin', end: 'paris', via: [], route: [],
     zoom: 1, panX: 0, panY: 0, width: 0, height: 0, dpr: 1,
     dragging: false, dragFrom: null, moved: false, pointer: null, live: null,
@@ -105,7 +105,13 @@
     ctx.beginPath();points.forEach((n,i)=>{const p=toScreen(n.x,n.z);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});
     ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=width;ctx.setLineDash(dash);ctx.strokeStyle=color;ctx.stroke();ctx.setLineDash([]);
   }
+  let renderQueued = false;
   function render() {
+    if(renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => { renderQueued = false; paint(); });
+  }
+  function paint() {
     if(!S.graph||!S.width||!S.height)return;
     const W=S.width,H=S.height;
     ctx.clearRect(0,0,W,H);
@@ -114,9 +120,15 @@
     ctx.strokeStyle='#172b37';ctx.lineWidth=.6;
     for(let x=0;x<W;x+=52){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
     for(let y=0;y<H;y+=52){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    if (S.realPack) {
-      // Draw only visible links in a single Canvas path, not one stroke per edge.
-      const b=bounds(), factor=b.scale*S.zoom, left=S.width/2+S.panX, top=S.height/2+S.panY;
+    if (S.roadCache) {
+      // Rasterized road layer: a single cropped drawImage instead of ~200k
+      // individual road segments on every mousemove or telemetry update.
+      const bounds = S.realPack.bounds;
+      S.roadCache.draw(ctx, Math.max(.00001,Math.min((W-110)/bounds.dx,(H-200)/bounds.dz))*S.zoom,
+        W/2+S.panX, H/2+S.panY, bounds.cx, bounds.cz, W, H);
+    } else if (S.realPack) {
+      // Graceful fallback if the browser cannot allocate a cached map canvas.
+      const b=bounds(), factor=b.scale*S.zoom, left=W/2+S.panX, top=H/2+S.panY;
       const points=S.realPack.points;ctx.strokeStyle='#355266';ctx.lineWidth=1.5;ctx.beginPath();
       for (const [ia,ib] of S.realPack.roads) {
         const a=points[ia], c=points[ib];
@@ -229,6 +241,15 @@
   function loadMap(input, isReal) {
     S.realPack=isReal ? window.ETS2RoutePack.normalize(input) : null;
     S.graph=S.realPack || input;
+    S.roadCache=null;
+    if (S.realPack && window.ETS2RoadCache) {
+      try {
+        // Reduce GPU memory consumption on phones and low-memory computers.
+        const lowMemory = (navigator.deviceMemory && navigator.deviceMemory<=4) || window.innerWidth<780;
+        S.roadCache=window.ETS2RoadCache.create(
+          S.realPack.points, S.realPack.roads, S.realPack.bounds, lowMemory?2048:3072);
+      } catch(err) { console.warn('Road cache unavailable, using vector fallback',err); }
+    }
     if(!S.realPack && !['demo','ets2'].includes(S.graph.coordinateSystem)) {
       throw new Error('Неизвестная система координат');
     }
@@ -261,8 +282,7 @@
     $('mapImportStatus').textContent='Читаю дорожный граф…';
     try {
       const parsed=JSON.parse(await file.text());
-      // Validate the entire pack before replacing the displayed map.
-      window.ETS2RoutePack.normalize(parsed);
+      // loadMap validates and normalizes only once to reduce 10 MB import work.
       loadMap(parsed,true);
     }catch(error){$('mapImportStatus').textContent='Ошибка загрузки: '+error.message;console.error(error);}
   }
