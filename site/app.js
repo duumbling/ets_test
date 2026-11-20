@@ -123,8 +123,9 @@
       const button=document.createElement('button');
       button.type='button';button.className='poi-result';
       const cat=window.ETS2POI.categories[poi.category];
-      const dot=document.createElement('span');
-      dot.className='poi-symbol';dot.style.background=cat.color;dot.textContent=cat.symbol;
+      const dot=document.createElement('canvas');
+      dot.className='poi-symbol-canvas';dot.width=32;dot.height=32;
+      window.ETS2POISymbols.draw(dot.getContext('2d'),16,16,poi.category,{size:28});
       const label=document.createElement('span');label.className='poi-result-label';
       const title=document.createElement('strong');title.textContent=poi.name;
       const subtitle=document.createElement('small');
@@ -274,19 +275,41 @@
       const minX=b.cx+(-30-left)/factor,maxX=b.cx+(W+30-left)/factor;
       const minZ=b.cz+(-30-top)/factor,maxZ=b.cz+(H+30-top)/factor;
       const category=$('poiCategory').value||'all';
-      S.visiblePois=S.poiIndex.within(minX,minZ,maxX,maxZ,category,900);
+      const candidates=S.poiIndex.within(minX,minZ,maxX,maxZ,category,1200);
+      // When multiple services share a garage or highway stop, give priority
+      // to fuel/repair rather than stacking five unreadable dots.
+      const rank={fuel:0,service:1,parking:2,company:3,garage:4,dealer:5,
+        ferry:6,train:7,weigh:8,recruitment:9,viewpoint:10,landmark:11};
+      candidates.sort((a,b)=>{
+        const aSelected=a.id===S.end||a.id===S.start||S.via.includes(a.id);
+        const bSelected=b.id===S.end||b.id===S.start||S.via.includes(b.id);
+        return Number(bSelected)-Number(aSelected)||
+          (rank[a.category]??99)-(rank[b.category]??99);
+      });
+      const used=new Set(),labelSlots=new Set();
       ctx.save();
-      for(const poi of S.visiblePois){
+      for(const poi of candidates){
         const p=toScreen(poi.x,poi.z);
-        const meta=window.ETS2POI.categories[poi.category];
         const selected=poi.id===S.end||poi.id===S.start||S.via.includes(poi.id);
-        ctx.beginPath();ctx.arc(p.x,p.y,selected?9:5,0,Math.PI*2);
-        ctx.fillStyle=meta.color;ctx.fill();
-        ctx.lineWidth=selected?3:1.5;ctx.strokeStyle=selected?'#ffffff':'#0a1723';ctx.stroke();
-        if(selected){
-          ctx.font='bold 12px system-ui';ctx.textAlign='left';ctx.fillStyle='#f6fbff';
-          ctx.fillText(poi.name,p.x+13,p.y-8);
+        const cell=Math.floor(p.x/26)+':'+Math.floor(p.y/26);
+        if(used.has(cell)&&!selected)continue;
+        used.add(cell);
+        S.visiblePois.push(poi);
+        window.ETS2POISymbols.draw(ctx,p.x,p.y,poi.category,
+          {selected,size:selected?32:25});
+        if(selected||(S.zoom>=130&&S.visiblePois.length<=55)){
+          const labelCell=Math.floor(p.x/110)+':'+Math.floor(p.y/34);
+          if(selected||!labelSlots.has(labelCell)){
+            labelSlots.add(labelCell);
+            const name=poi.name;
+            ctx.font=selected?'bold 12px system-ui':'11px system-ui';
+            ctx.textAlign='left';
+            ctx.lineWidth=3.5;ctx.strokeStyle='#081724';
+            ctx.strokeText(name,p.x+19,p.y+4);
+            ctx.fillStyle='#f4f9fe';ctx.fillText(name,p.x+19,p.y+4);
+          }
         }
+        if(S.visiblePois.length>=300)break;
       }
       ctx.restore();
     }
@@ -294,10 +317,9 @@
     if(selectedPoi?.category&&!S.visiblePois.some(p=>p.id===selectedPoi.id)){
       const p=toScreen(selectedPoi.x,selectedPoi.z);
       if(p.x>=-20&&p.x<=W+20&&p.y>=-20&&p.y<=H+20){
-        ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);
-        ctx.fillStyle='#ffa976';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+        window.ETS2POISymbols.draw(ctx,p.x,p.y,selectedPoi.category,{selected:true,size:32});
         ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='bold 12px system-ui';
-        ctx.fillText(selectedPoi.name,p.x+14,p.y-8);
+        ctx.fillText(selectedPoi.name,p.x+19,p.y-8);
       }
     }
     if(S.realPack&&S.live&&Number.isFinite(S.live.x)&&Number.isFinite(S.live.z)){
@@ -312,11 +334,33 @@
     return id;
   }
   function onPointerDown(e){canvas.setPointerCapture(e.pointerId);S.dragging=true;S.moved=false;S.dragFrom={x:e.clientX,y:e.clientY,px:S.panX,py:S.panY};}
-  function onPointerMove(e){if(!S.dragging)return;const dx=e.clientX-S.dragFrom.x,dy=e.clientY-S.dragFrom.y;
-    if(Math.hypot(dx,dy)>5)S.moved=true;S.panX=S.dragFrom.px+dx;S.panY=S.dragFrom.py+dy;render();}
+  function onPointerMove(e){
+    if(!S.dragging){
+      const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+      let found=null,dist=17;
+      for(const poi of S.visiblePois){
+        const p=toScreen(poi.x,poi.z),d=Math.hypot(x-p.x,y-p.y);
+        if(d<dist){dist=d;found=poi;}
+      }
+      const tip=$('poiTooltip');
+      tip.hidden=!found;
+      canvas.style.cursor=found?'pointer':'grab';
+      if(found){
+        const meta=window.ETS2POI.categories[found.category];
+        tip.textContent=meta.label+' · '+found.name+(found.approximate?' · подъезд приблизительный':'');
+        tip.style.left=Math.min(S.width-230,x+20)+'px';
+        tip.style.top=Math.max(14,Math.min(S.height-70,y-45))+'px';
+      }
+      return;
+    }
+    $('poiTooltip').hidden=true;
+    const dx=e.clientX-S.dragFrom.x,dy=e.clientY-S.dragFrom.y;
+    if(Math.hypot(dx,dy)>5)S.moved=true;
+    S.panX=S.dragFrom.px+dx;S.panY=S.dragFrom.py+dy;render();
+  }
   function onPointerUp(e){if(!S.dragging)return;S.dragging=false;if(S.moved)return;
     const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
-    let bestPoi=null,bestDistance=16;
+    let bestPoi=null,bestDistance=18;
     for(const poi of S.visiblePois){
       const p=toScreen(poi.x,poi.z),dist=Math.hypot(x-p.x,y-p.y);
       if(dist<bestDistance){bestPoi=poi;bestDistance=dist;}
@@ -647,7 +691,8 @@
     else zoom(3,{x,y});
   });
   canvas.addEventListener('pointerdown',onPointerDown);canvas.addEventListener('pointermove',onPointerMove);canvas.addEventListener('pointerup',onPointerUp);
-  canvas.addEventListener('pointercancel',()=>{S.dragging=false;});
+  canvas.addEventListener('pointercancel',()=>{S.dragging=false;$('poiTooltip').hidden=true;});
+  canvas.addEventListener('pointerleave',()=>{$('poiTooltip').hidden=true;canvas.style.cursor='grab';});
   canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoom(e.deltaY<0?1.24:1/1.24,{x:e.clientX-r.left,y:e.clientY-r.top});},{passive:false});
   new ResizeObserver(resize).observe(canvas);init();
 })();
