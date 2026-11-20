@@ -45,25 +45,31 @@
           <details class="settings" id="relaySettings" hidden><summary>Настройки интернет-сервера</summary><label for="relayUrl">Адрес WebSocket-сервера</label><input id="relayUrl" type="url" spellcheck="false" placeholder="wss://your-worker.workers.dev"><button id="saveRelay" class="secondary small">Сохранить адрес</button></details>
         </section>
         <section class="panel map-import-panel">
-          <div class="eyebrow">КАРТА ETS2</div>
-          <h2>Настоящие дороги</h2>
-          <p class="muted">Выбери карту из файлов ETS2 один раз: она сохранится <strong>только на этом устройстве</strong>. Для разных наборов DLC и картографических модов можно создавать отдельные профили.</p>
-          <label for="savedMapSelect">Сохранённая карта</label>
+          <div class="eyebrow">НАСТРОЙКА КАРТЫ · 2 ФАЙЛА</div>
+          <h2>Подключить свою карту ETS2</h2>
+          <p class="muted">Здесь два разных файла. Загружай их <strong>по порядку</strong>: первый создаёт города и маршрутную сеть, второй добавляет детальные улицы на большом увеличении. Второй файл не заменяет первый.</p>
+          <label for="savedMapSelect">Уже сохранённая карта (на этом устройстве)</label>
           <select id="savedMapSelect"><option value="">Демо-карта</option></select>
           <button id="deleteSavedMap" class="secondary small" type="button" disabled>Удалить выбранную карту</button>
-          <label for="mapProfileName" style="margin-top:16px">Название новой карты (необязательно)</label>
-          <input id="mapProfileName" type="text" maxlength="100" placeholder="Например, ETS2 + все мои DLC">
-          <label for="mapFile" class="file-label">Открыть файл карты</label>
-          <input id="mapFile" type="file" accept=".json,application/json">
-          <p id="mapImportStatus" class="hint" aria-live="polite">Сейчас используется демонстрационная схема.</p>
-          <div class="detail-uploader">
-            <label for="detailFile">Подробная карта улиц и развязок</label>
-            <input id="detailFile" type="file" accept=".gz,.json,application/json,application/gzip">
-            <p class="hint" id="detailStatus" aria-live="polite">Необязательный дополнительный слой. Создаётся из файлов игры, чтобы видеть улицы при приближении.</p>
-            <a class="hint" href="https://github.com/duumbling/ets_test/blob/main/docs/DETAILED_CITY_MAP.md" target="_blank" rel="noopener noreferrer">Как создать подробную карту</a>
+          <label for="mapProfileName" style="margin-top:16px">Название профиля (необязательно)</label>
+          <input id="mapProfileName" type="text" maxlength="100" placeholder="Например, ETS2 · все DLC">
+          <div class="map-import-step">
+            <div class="map-step-heading"><span class="map-step-number">1</span><div><strong>Основная карта · обязательно</strong><small>Файл <code>ets2-routepack.json</code></small></div></div>
+            <p>Города, дорожный граф и объекты. Без него подробные улицы не подключатся.</p>
+            <label for="mapFile" class="file-label">Выбрать основную карту (.json)</label>
+            <input id="mapFile" type="file" accept=".json,application/json">
+            <p id="mapImportStatus" class="hint" aria-live="polite">Шаг 1 не выполнен. Выбери ets2-routepack.json.</p>
           </div>
-          <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/MAP_PROFILES.md" target="_blank" rel="noopener noreferrer">Сохранённые карты, DLC и простой сборщик Windows</a></p>
-          <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/REAL_MAP.md" target="_blank" rel="noopener noreferrer">Как создать файл из ETS2</a></p>
+          <div class="detail-uploader map-import-step">
+            <div class="map-step-heading"><span class="map-step-number">2</span><div><strong>Подробные улицы · дополнительно</strong><small>Файл <code>ets2-city-detail.json.gz</code></small></div></div>
+            <p>Геометрия улиц, перекрёстков и подъездов. Нужна для детального вида города. Загружай только после основной карты.</p>
+            <label for="detailFile" class="file-label">Выбрать подробные улицы (.json.gz)</label>
+            <input id="detailFile" type="file" accept=".gz,.json,application/json,application/gzip">
+            <p class="hint" id="detailStatus" aria-live="polite">Сначала выполни шаг 1. Нужен именно файл .json.gz, не ZIP-архив.</p>
+            <a class="hint" href="https://github.com/duumbling/ets_test/blob/main/docs/DETAILED_CITY_MAP.md" target="_blank" rel="noopener noreferrer">Инструкция: как получить подробные улицы</a>
+          </div>
+          <p class="hint">После загрузки обоих файлов они сохраняются в профиле браузера на этом устройстве. При переключении профиля его подробные улицы восстанавливаются автоматически.</p>
+          <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/MAP_PROFILES.md" target="_blank" rel="noopener noreferrer">Сохранённые карты, DLC и сборщик Windows</a></p>
         </section>
         <section class="panel poi-panel">
           <div class="eyebrow">МЕСТА НА КАРТЕ</div>
