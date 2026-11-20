@@ -11,4 +11,19 @@ assert.equal(shortest(p.adj,3,0),null,'the links must remain one-way');
 assert.deepEqual(shortest(p.adj,1,1),{path:[1],meters:0});
 assert.throws(()=>normalize({format:'ets2-routepack-v1',coordinateSystem:'ets2',points:[[0,0],[1,0]],links:[[0,8,1]],cities:[['a','A',0,0,0],['b','B',1,0,1]]}),/Некорректная связь/);
 assert.throws(()=>normalize({coordinateSystem:'demo'}),/ets2-routepack-v1/);
+const withPois=normalize({format:'ets2-routepack-v1',coordinateSystem:'ets2',
+  points:[[0,0],[10,0],[20,0]],links:[[0,1,10],[1,2,10]],
+  cities:[['a','Город А',0,0,0],['b','Город Б',20,0,2]],
+  pois:[['poi-0','fuel','Заправка',10,1,1,1],
+        ['poi-1','service','Автосервис',20,1,2,0]]});
+assert.equal(withPois.pois.length,2);
+assert.equal(withPois.pois[0].roadNode,1);
+assert.equal(withPois.pois[0].approximate,true);
+assert.deepEqual(shortest(withPois.adj,0,withPois.pois[0].roadNode),
+                 {path:[0,1],meters:10});
+assert.throws(()=>normalize({format:'ets2-routepack-v1',coordinateSystem:'ets2',
+  points:[[0,0],[10,0]],links:[[0,1,10]],
+  cities:[['a','A',0,0,0],['b','B',10,0,1]],
+  pois:[['poi-0','unknown','bad',10,0,1,0]]}),/Некорректный объект/);
+assert.deepEqual(p.pois,[], 'legacy map without POIs still loads');
 console.log('ETS2 routepack tests: OK');
