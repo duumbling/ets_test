@@ -151,7 +151,7 @@ def install_map_tools(maps: Path):
 
 
 def run_parser_and_graph(maps: Path, game: Path, parser: Path, output_dir: Path,
-                         *, graph_only: bool = False):
+                         *, graph_only: bool = False, base_only: bool = False):
     # The upstream parser's UNIX shebang sets an 8 GiB heap; running the
     # TypeScript entrypoint through npx on Windows bypasses that shebang.
     os.environ.setdefault('NODE_OPTIONS', '--max-old-space-size=8192')
@@ -167,8 +167,11 @@ def run_parser_and_graph(maps: Path, game: Path, parser: Path, output_dir: Path,
             )
         print('Reusing previously parsed ETS2 road data; skipping game extraction.', flush=True)
     else:
-        run('npx', '--no-install', 'tsx', 'packages/clis/parser/index.ts',
-            '-i', game, '-o', parser, cwd=maps)
+        command = ['npx', '--no-install', 'tsx', 'packages/clis/parser/index.ts',
+                   '-i', game, '-o', parser]
+        if base_only:
+            command.append('--no-includeDlc')
+        run(*command, cwd=maps)
 
     # Do NOT pass -c/--check. The optional upstream route verifier uses
     # Tinypool and its find-route-worker-wrapper.js can fail with
@@ -186,7 +189,11 @@ def main():
     ap.add_argument('--output',type=Path,default=Path.home()/'Downloads'/'ets2-routepack.json')
     ap.add_argument('--graph-only',action='store_true',
                     help='Reuse existing out/parser/*.json, skip npm install and ETS2 re-parsing')
+    ap.add_argument('--base-only',action='store_true',
+                    help='Export base ETS2 only, ignore all DLC archives (does not include mods)')
     args=ap.parse_args()
+    if args.graph_only and args.base_only:
+        ap.error('--graph-only cannot be combined with --base-only: the existing cache may include DLC.')
     try:
         require_command('git');require_command('node');require_command('npm');require_command('npx')
         node_version=subprocess.check_output(['node','-v'],text=True).strip()
@@ -221,9 +228,14 @@ def main():
                 print('ETS2 Navigator route-only parsing is already enabled.', flush=True)
         parser=maps/'out'/'parser';output_dir=maps/'out'
         parser.mkdir(parents=True,exist_ok=True);output_dir.mkdir(parents=True,exist_ok=True)
-        run_parser_and_graph(maps, game, parser, output_dir, graph_only=args.graph_only)
+        run_parser_and_graph(maps, game, parser, output_dir,
+                             graph_only=args.graph_only, base_only=args.base_only)
         pack=make_pack(read_json(parser/'europe-nodes.json'),read_json(parser/'europe-cities.json'),
                        read_json(output_dir/'europe-graph.json'))
+        pack['buildProfile']='base-only' if args.base_only else 'installed-game-archives'
+        pack['title']='ETS2 — базовая карта (без DLC)' if args.base_only else 'ETS2 — установленные игровые архивы'
+        pack['installedDlcArchives']=([] if args.base_only else sorted(p.name for p in game.glob('dlc_*.scs')))
+        pack['mapModsIncluded']=False
         target=args.output.expanduser().resolve();target.parent.mkdir(parents=True,exist_ok=True)
         target.write_text(json.dumps(pack,separators=(',',':'),ensure_ascii=False),encoding='utf-8')
         print(f'ГОТОВО: {target}')
