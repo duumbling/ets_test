@@ -12,13 +12,14 @@
   <script defer src="pois.js"></script>
   <script defer src="road-cache.js"></script>
   <script defer src="road-vectors.js"></script>
+  <script defer src="city-detail.js"></script>
   <script defer src="map-storage.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.7</span></div>
+      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.8</span></div>
       <div id="connectionPill" class="connection-pill"><span class="dot"></span><span id="connectionLabel">Не подключено</span></div>
     </header>
     <main class="layout">
@@ -54,6 +55,12 @@
           <label for="mapFile" class="file-label">Открыть файл карты</label>
           <input id="mapFile" type="file" accept=".json,application/json">
           <p id="mapImportStatus" class="hint" aria-live="polite">Сейчас используется демонстрационная схема.</p>
+          <div class="detail-uploader">
+            <label for="detailFile">Подробная карта улиц и развязок</label>
+            <input id="detailFile" type="file" accept=".gz,.json,application/json,application/gzip">
+            <p class="hint" id="detailStatus" aria-live="polite">Необязательный дополнительный слой. Создаётся из файлов игры, чтобы видеть улицы при приближении.</p>
+            <a class="hint" href="https://github.com/duumbling/ets_test/blob/main/docs/DETAILED_CITY_MAP.md" target="_blank" rel="noopener noreferrer">Как создать подробную карту</a>
+          </div>
           <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/MAP_PROFILES.md" target="_blank" rel="noopener noreferrer">Сохранённые карты, DLC и простой сборщик Windows</a></p>
           <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/REAL_MAP.md" target="_blank" rel="noopener noreferrer">Как создать файл из ETS2</a></p>
         </section>
@@ -82,7 +89,7 @@
       </aside>
       <section class="map-area">
         <canvas id="mapCanvas" role="img" aria-label="Интерактивная карта городов и маршрутов"></canvas>
-        <div class="map-top"><div><span class="map-kicker">КАРТА ETS2</span><h2 id="mapTitle">Планировщик маршрутов</h2></div><span id="mapState" class="demo-badge">ДЕМО-КАРТА</span></div>
+        <div class="map-top"><div><span class="map-kicker">КАРТА ETS2</span><h2 id="mapTitle">Планировщик маршрутов</h2><div class="map-zoom-info" id="zoomInfo">Масштаб 1×</div></div><span id="mapState" class="demo-badge">ДЕМО-КАРТА</span></div>
         <div class="map-bottom"><div class="legend"><span><i class="legend-line"></i> Путь</span><span><i class="legend-dot"></i> Точка маршрута</span></div><div class="map-controls"><button id="zoomCity" title="Приблизить к выбранному городу или месту" aria-label="Показать город вблизи">⌕</button><button id="zoomIn" aria-label="Приблизить">+</button><button id="zoomOut" aria-label="Отдалить">−</button><button id="resetView" title="Сбросить масштаб">⌖</button></div></div>
         <div class="map-note" id="mapNotice">Сейчас показан тестовый граф, а не реальные дороги ETS2. Подключение настоящей дорожной сети — следующий этап.</div>
       </section>
