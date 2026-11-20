@@ -10,6 +10,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from patch_upstream_geojson import patch_geojson_ferries
 
 
 def tool(name):
@@ -49,6 +50,10 @@ def main():
     try:
         print('Generating detailed ETS2 streets and prefab shapes from local parser cache.',flush=True)
         print('This can use substantial memory and temporary disk space.',flush=True)
+        if patch_geojson_ferries(maps):
+            print('Applied road-only GeoJSON fix: skip unsupported ferry DLC guards.',flush=True)
+        else:
+            print('Road-only GeoJSON ferry fix already present.',flush=True)
         shutil.copyfile(converter,copied)
         cmd=[npx,'--no-install','tsx','packages/clis/generator/index.ts',
              'map','-m','europe','-i',str(parsed),'-o',str(maps/'out'),
