@@ -49,7 +49,85 @@ def nearest_neighbor_index(x, z, grid, points, cell_size=4000.0):
     return min(range(len(points)),key=lambda i:(points[i][0]-x)**2+(points[i][1]-z)**2)
 
 
-def make_pack(nodes_json, cities_json, graph_json):
+# SCS map POIs are produced by truckermudgeon/maps in europe-pois.json.
+# These are genuine world-space positions; they are not synthesized from cities.
+POI_ICON_CATEGORY = {
+    'gas_ico': 'fuel',
+    'service_ico': 'service',
+    'parking_ico': 'parking',
+    'weigh_station_ico': 'weigh',
+    'dealer_ico': 'dealer',
+    'garage_large_ico': 'garage',
+    'recruitment_ico': 'recruitment',
+}
+POI_TYPE_CATEGORY = {
+    'company': 'company',
+    'ferry': 'ferry',
+    'train': 'train',
+    'viewpoint': 'viewpoint',
+    'landmark': 'landmark',
+}
+POI_LABELS = {
+    'fuel': 'Заправка', 'service': 'Автосервис',
+    'parking': 'Парковка / отдых', 'weigh': 'Весовая станция',
+    'dealer': 'Дилер грузовиков', 'garage': 'Гараж',
+    'recruitment': 'Кадровое агентство', 'company': 'Предприятие',
+    'ferry': 'Паром', 'train': 'Поезд', 'viewpoint': 'Смотровая площадка',
+    'landmark': 'Достопримечательность',
+}
+
+
+def create_pois(pois_json, ids, points, grid, cell_size=4000.0):
+    """Return compact POIs [id, category, name, x, z, graphNode, approx].
+
+    Use an explicitly referenced graph node if present; otherwise spatially
+    snap to the closest graph node. This is only an approximate road approach,
+    not guaranteed entrance/driveway or turn-by-turn navigation.
+    """
+    if not isinstance(pois_json, list):
+        raise ValueError('POI input must be europe-pois.json array')
+    result = []
+    seen = set()
+    for source_index, poi in enumerate(pois_json):
+        if not isinstance(poi, dict):
+            continue
+        x, z = poi.get('x'), poi.get('y')
+        if not isinstance(x, (int, float)) or not isinstance(z, (int, float)):
+            continue
+        if not math.isfinite(x) or not math.isfinite(z):
+            continue
+        category = POI_TYPE_CATEGORY.get(poi.get('type'))
+        if poi.get('type') == 'facility':
+            category = POI_ICON_CATEGORY.get(poi.get('icon'))
+        if not category:
+            continue
+        label = poi.get('label')
+        if not isinstance(label, str) or not label.strip():
+            label = POI_LABELS[category]
+        # Stable within a given exported map; unique even for adjacent pumps.
+        key = (category, round(x, 1), round(z, 1), label)
+        if key in seen:
+            continue
+        seen.add(key)
+        road_node = None
+        refs = ([poi.get('nodeUid')] if poi.get('nodeUid') is not None else [])
+        refs += poi.get('itemNodeUids', []) if isinstance(poi.get('itemNodeUids'), list) else []
+        for ref in refs:
+            if str(ref) in ids:
+                road_node = ids[str(ref)]
+                break
+        approximate = road_node is None
+        if approximate:
+            road_node = nearest_neighbor_index(x, z, grid, points, cell_size)
+        # Keep category and actual world position, even if the reachable graph
+        # node is some distance away from this location.
+        result.append(['poi-' + str(source_index), category, label.strip()[:120],
+                       round(float(x), 2), round(float(z), 2), road_node,
+                       1 if approximate else 0])
+    return result
+
+
+def make_pack(nodes_json, cities_json, graph_json, pois_json=None):
     if not isinstance(nodes_json,list) or not isinstance(cities_json,list):
         raise ValueError('Nodes and cities must be arrays from truckermudgeon/maps parser')
     if not isinstance(graph_json,dict) or not isinstance(graph_json.get('graph'),list):
@@ -105,10 +183,12 @@ def make_pack(nodes_json, cities_json, graph_json):
         cities.append([city_id,name,round(float(x),2),round(float(z),2),near])
         seen.add(city_id)
     if len(cities)<2:raise ValueError('Found fewer than two valid cities')
+    pois = create_pois(pois_json, ids, points, grid, cell_size) if pois_json is not None else []
     return {
         'format':FORMAT,'coordinateSystem':'ets2','title':'Дорожный граф ETS2',
         'source':'Из локальной копии ETS2; топология graph generator (truckermudgeon/maps)',
-        'points':points,'links':links,'cities':sorted(cities,key=lambda c:c[1].casefold())
+        'points':points,'links':links,'cities':sorted(cities,key=lambda c:c[1].casefold()),
+        'pois':pois
     }
 
 
@@ -118,13 +198,16 @@ def main():
     parser.add_argument('--graph',required=True,type=Path)
     parser.add_argument('--output',required=True,type=Path)
     args=parser.parse_args()
+    poi_file = args.parser_dir/'europe-pois.json'
     pack=make_pack(read_json(args.parser_dir/'europe-nodes.json'),
-                   read_json(args.parser_dir/'europe-cities.json'),read_json(args.graph))
+                   read_json(args.parser_dir/'europe-cities.json'),read_json(args.graph),
+                   read_json(poi_file) if poi_file.is_file() else None)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     with args.output.open('w',encoding='utf-8') as handle:
         json.dump(pack,handle,ensure_ascii=False,separators=(',',':'))
     print(f"Готово: {args.output} | {len(pack['points'])} узлов, "
-          f"{len(pack['links'])} направленных связей, {len(pack['cities'])} городов")
+          f"{len(pack['links'])} направленных связей, {len(pack['cities'])} городов, "
+          f"{len(pack['pois'])} объектов")
     print('Это дорожная топология, не точная картинка всех изгибов и не гарантированная модель поворотов.')
 
 
