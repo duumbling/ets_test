@@ -10,6 +10,7 @@
   <script defer src="config.js"></script>
   <script defer src="routepack.js"></script>
   <script defer src="pois.js"></script>
+  <script defer src="poi-symbols.js"></script>
   <script defer src="road-cache.js"></script>
   <script defer src="road-vectors.js"></script>
   <script defer src="city-detail.js"></script>
@@ -19,7 +20,7 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.8</span></div>
+      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.9</span></div>
       <div id="connectionPill" class="connection-pill"><span class="dot"></span><span id="connectionLabel">Не подключено</span></div>
     </header>
     <main class="layout">
@@ -90,7 +91,9 @@
       <section class="map-area">
         <canvas id="mapCanvas" role="img" aria-label="Интерактивная карта городов и маршрутов"></canvas>
         <div class="map-top"><div><span class="map-kicker">КАРТА ETS2</span><h2 id="mapTitle">Планировщик маршрутов</h2><div class="map-zoom-info" id="zoomInfo">Масштаб 1×</div></div><span id="mapState" class="demo-badge">ДЕМО-КАРТА</span></div>
-        <div class="map-bottom"><div class="legend"><span><i class="legend-line"></i> Путь</span><span><i class="legend-dot"></i> Точка маршрута</span></div><div class="map-controls"><button id="zoomCity" title="Приблизить к выбранному городу или месту" aria-label="Показать город вблизи">⌕</button><button id="zoomIn" aria-label="Приблизить">+</button><button id="zoomOut" aria-label="Отдалить">−</button><button id="resetView" title="Сбросить масштаб">⌖</button></div></div>
+        <div class="map-scale" id="mapScale" title="Игровые координаты ETS2; не физические километры"><span class="map-scale-bar" id="mapScaleBar"></span><span id="mapScaleLabel">Игровые единицы</span></div>
+        <div class="poi-tooltip" id="poiTooltip" hidden></div>
+        <div class="map-bottom"><div class="legend"><span><i class="legend-line"></i> Путь</span><span><i class="legend-dot"></i> Точка маршрута</span><span>⛽ Заправка · 🔧 Сервис · 🅿 Стоянка</span></div><div class="map-controls"><button id="zoomCity" title="Приблизить к выбранному городу или месту" aria-label="Показать город вблизи">⌕</button><button id="zoomIn" aria-label="Приблизить">+</button><button id="zoomOut" aria-label="Отдалить">−</button><button id="resetView" title="Сбросить масштаб">⌖</button></div></div>
         <div class="map-note" id="mapNotice">Сейчас показан тестовый граф, а не реальные дороги ETS2. Подключение настоящей дорожной сети — следующий этап.</div>
       </section>
     </main>
