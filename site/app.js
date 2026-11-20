@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const S = {
-    graph: null, realPack: null, roadCache: null, roadVectors: null, routeMeters: 0, nodes: [], pois: [], poiIndex: null, visiblePois: [], nodesById: new Map(), adj: new Map(),
+    graph: null, realPack: null, roadCache: null, roadVectors: null, cityDetail: null, routeMeters: 0, nodes: [], pois: [], poiIndex: null, visiblePois: [], nodesById: new Map(), adj: new Map(),
     start: 'berlin', end: 'paris', via: [], route: [],
     zoom: 1, panX: 0, panY: 0, width: 0, height: 0, dpr: 1,
     dragging: false, dragFrom: null, moved: false, pointer: null, live: null,
@@ -144,6 +144,7 @@
     if(!point)return;
     const b=bounds();
     S.zoom=Math.min(S.realPack?360:12,Math.max(S.zoom,requestedZoom));
+    $('zoomInfo').textContent='Масштаб '+Math.round(S.zoom)+'×';
     const scale=b.scale*S.zoom;
     S.panX=-(point.x-b.cx)*scale;S.panY=-(point.z-b.cz)*scale;
     render();
@@ -206,7 +207,9 @@
         S.roadVectors=window.ETS2VectorRoads.indexSegments(S.realPack.points,S.realPack.roads);
       } catch(error){console.warn('High zoom road index could not be built',error);}
     }
-    if (S.realPack && S.zoom>=6 && S.roadVectors) {
+    if (S.realPack && S.zoom>=6 && S.cityDetail) {
+      S.cityDetail.draw(ctx,viewRect());
+    } else if (S.realPack && S.zoom>=6 && S.roadVectors) {
       S.roadVectors.draw(ctx,viewRect(),'#496779',S.zoom>80?3.5:2.6);
     } else if (S.roadCache) {
       // Rasterized road layer: a single cropped drawImage instead of ~200k
@@ -305,7 +308,9 @@
     const cx=p?.x??S.width/2,cy=p?.y??S.height/2;
     S.panX=cx-S.width/2-(cx-S.width/2-S.panX)*k;
     S.panY=cy-S.height/2-(cy-S.height/2-S.panY)*k;
-    S.zoom=newZoom;render(); }
+    S.zoom=newZoom;
+    $('zoomInfo').textContent='Масштаб '+Math.round(S.zoom)+'×';
+    render(); }
 
   function isAllowedLanUrl(raw) {
     try {
@@ -369,7 +374,9 @@
   function loadMap(input, isReal) {
     S.realPack=isReal ? window.ETS2RoutePack.normalize(input) : null;
     S.graph=S.realPack || input;
-    S.roadCache=null;S.roadVectors=null;
+    S.roadCache=null;S.roadVectors=null;S.cityDetail=null;
+    $('detailStatus').textContent='Подробные улицы не загружены. Выбери дополнительный файл .json.gz.';
+    $('zoomInfo').textContent='Масштаб 1×';
     if (S.realPack && window.ETS2RoadCache) {
       try {
         // Reduce GPU memory consumption on phones and low-memory computers.
@@ -406,6 +413,45 @@
     $('mapImportStatus').textContent=S.realPack
       ? `Загружено: ${S.nodes.length} городов, ${S.realPack.points.length} узлов, ${S.realPack.linkCount} направленных связей, ${S.pois.length} объектов.`
       : 'Используется демонстрационная схема. Реальная карта не загружена.';
+  }
+  async function loadDetailBlob(blob, isNewImport=false) {
+    if(!S.realPack)throw Error('Сначала загрузи дорожную сеть ETS2 (ets2-routepack.json).');
+    if(blob.size>200*1024*1024)throw Error('Подробная карта слишком большая (максимум 200 МБ).');
+    const gzip = blob.type==='application/gzip' || blob.name?.endsWith('.gz');
+    let raw;
+    if(gzip){
+      if(!window.DecompressionStream)throw Error('Для .gz нужен актуальный Chrome или Edge.');
+      const response=new Response(blob.stream().pipeThrough(new DecompressionStream('gzip')));
+      raw=await response.text();
+    } else {
+      raw=await blob.text();
+    }
+    const parsed=JSON.parse(raw);
+    const layer=window.ETS2CityDetail.create(parsed);
+    S.cityDetail=layer;
+    $('detailStatus').textContent='Подробная геометрия загружена: '+layer.count+
+      ' дорожных участков и территорий. Приблизь город до 6× или воспользуйся кнопкой ⌕.';
+    if(isNewImport){
+      const active=localStorage.getItem(ACTIVE_MAP_KEY);
+      if(active&&window.ETS2MapStorage){
+        try{
+          await window.ETS2MapStorage.saveDetail(active,blob);
+          $('detailStatus').textContent+=' Сохранено вместе с этим профилем карты.';
+        }catch(err){
+          console.warn('Cannot persist detailed map',err);
+          $('detailStatus').textContent+=' Не удалось сохранить: '+err.message;
+        }
+      }else{
+        $('detailStatus').textContent+=' Чтобы сохранить между сеансами, импортируй основной JSON как профиль.';
+      }
+    }
+    render();
+  }
+  async function restoreDetail(id){
+    S.cityDetail=null;
+    if(!id||!window.ETS2MapStorage)return;
+    const entry=await window.ETS2MapStorage.getDetail(id);
+    if(entry?.blob)await loadDetailBlob(entry.blob,false);
   }
   const ACTIVE_MAP_KEY='ets2-active-map-profile';
   async function updateSavedMaps(activeId='') {
@@ -448,6 +494,11 @@
     if(!item?.blob)throw new Error('Сохранённый профиль карты не найден');
     loadMap(JSON.parse(await item.blob.text()),true);
     localStorage.setItem(ACTIVE_MAP_KEY,id);
+    try{await restoreDetail(id);}
+    catch(error){
+      console.warn('Detailed map is unavailable',error);
+      $('detailStatus').textContent='Не удалось восстановить подробную карту: '+error.message;
+    }
     await updateSavedMaps(id);
     $('mapImportStatus').textContent+=' Сохранённая карта: «'+item.name+'» (только на этом устройстве).';
   }
@@ -508,6 +559,13 @@
   }
   $('poiCategory').addEventListener('change',()=>{updatePoiResults();render();});
   $('poiSearch').addEventListener('input',updatePoiResults);
+  $('detailFile').addEventListener('change',async event=>{
+    const file=event.target.files?.[0];if(!file)return;
+    $('detailStatus').textContent='Загружаю подробную карту города…';
+    try{await loadDetailBlob(file,true);}
+    catch(error){$('detailStatus').textContent='Ошибка подробной карты: '+error.message;console.error(error);}
+    event.target.value='';
+  });
   $('mapFile').addEventListener('change',loadFile);
   $('savedMapSelect').addEventListener('change',async e=>{
     try {
@@ -552,7 +610,8 @@
   $('saveRelay').addEventListener('click',()=>{const v=$('relayUrl').value.trim().replace(/\/$/,'');if(v&&!v.startsWith('wss://')){status('Неверный адрес',false,'Сервер должен начинаться с wss://');return;}S.relayUrl=v;localStorage.setItem('ets2-relay-url',v);status('Адрес сохранён',false,'Теперь можно вводить код подключения.');});
   $('zoomIn').addEventListener('click',()=>zoom(1.6));$('zoomOut').addEventListener('click',()=>zoom(1/1.6));
   $('zoomCity').addEventListener('click',showSelectedCity);
-  $('resetView').addEventListener('click',()=>{S.zoom=1;S.panX=0;S.panY=0;render();});
+  $('resetView').addEventListener('click',()=>{S.zoom=1;S.panX=0;S.panY=0;
+    $('zoomInfo').textContent='Масштаб 1×';render();});
   for(const [id,category] of Object.entries(window.ETS2POI.categories)){
     $('poiCategory').add(new Option(category.label,id));
   }
