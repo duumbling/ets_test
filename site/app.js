@@ -417,7 +417,8 @@
   async function loadDetailBlob(blob, isNewImport=false) {
     if(!S.realPack)throw Error('Сначала загрузи дорожную сеть ETS2 (ets2-routepack.json).');
     if(blob.size>200*1024*1024)throw Error('Подробная карта слишком большая (максимум 200 МБ).');
-    const gzip = blob.type==='application/gzip' || blob.name?.endsWith('.gz');
+    const magic=new Uint8Array(await blob.slice(0,2).arrayBuffer());
+    const gzip=magic[0]===0x1f&&magic[1]===0x8b;
     let raw;
     if(gzip){
       if(!window.DecompressionStream)throw Error('Для .gz нужен актуальный Chrome или Edge.');
