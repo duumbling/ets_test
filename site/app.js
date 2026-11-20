@@ -439,7 +439,7 @@
     S.realPack=isReal ? window.ETS2RoutePack.normalize(input) : null;
     S.graph=S.realPack || input;
     S.roadCache=null;S.roadVectors=null;S.cityDetail=null;
-    $('detailStatus').textContent='Подробные улицы не загружены. Выбери дополнительный файл .json.gz.';
+    $('detailStatus').textContent='Шаг 2 ещё не выполнен: загрузи подробный файл .json.gz после основной карты.';
     $('zoomInfo').textContent='Масштаб 1×';
     if (S.realPack && window.ETS2RoadCache) {
       try {
@@ -479,7 +479,7 @@
       : 'Используется демонстрационная схема. Реальная карта не загружена.';
   }
   async function loadDetailBlob(blob, isNewImport=false) {
-    if(!S.realPack)throw Error('Сначала загрузи дорожную сеть ETS2 (ets2-routepack.json).');
+    if(!S.realPack)throw Error('Сначала выполни шаг 1: загрузи основную карту ets2-routepack.json. Подробный файл не заменяет её.');
     if(blob.size>200*1024*1024)throw Error('Подробная карта слишком большая (максимум 200 МБ).');
     const magic=new Uint8Array(await blob.slice(0,2).arrayBuffer());
     const gzip=magic[0]===0x1f&&magic[1]===0x8b;
@@ -494,11 +494,14 @@
     const parsed=JSON.parse(raw);
     const layer=window.ETS2CityDetail.create(parsed);
     S.cityDetail=layer;
-    $('detailStatus').textContent='Подробная геометрия: '+layer.count+
-      ' элементов. '+(layer.isLegacy
-        ? 'Это старый формат: для исправленных перекрёстков пересобери файл подробной карты.'
-        : 'Технические линии перекрёстков отделены ('+layer.counters.prefabLines+') и не рисуются как улицы.')+
-      ' Для просмотра города нажми кнопку ⌕.';
+    $('detailStatus').textContent='Подробный слой загружен: '+layer.counters.roads+
+      ' обычных дорожных участков + '+layer.counters.prefabLines+
+      ' соединений внутри перекрёстков; '+layer.counters.prefabSurfaces+
+      ' поверхностей префабов, '+layer.counters.areas+' территорий. '+
+      (layer.isLegacy
+        ? 'Формат v1: часть соединений могла быть объединена со старыми дорогами.'
+        : 'Соединения внутри перекрёстков включены — они продолжают улицы через префабы.')+
+      ' Файл подходит к текущей основной карте. Приблизь город кнопкой ⌕.';
     if(isNewImport){
       const active=localStorage.getItem(ACTIVE_MAP_KEY);
       if(active&&window.ETS2MapStorage){
