@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const S = {
-    graph: null, realPack: null, roadCache: null, routeMeters: 0, nodes: [], nodesById: new Map(), adj: new Map(),
+    graph: null, realPack: null, roadCache: null, routeMeters: 0, nodes: [], pois: [], poiIndex: null, visiblePois: [], nodesById: new Map(), adj: new Map(),
     start: 'berlin', end: 'paris', via: [], route: [],
     zoom: 1, panX: 0, panY: 0, width: 0, height: 0, dpr: 1,
     dragging: false, dragFrom: null, moved: false, pointer: null, live: null,
@@ -62,10 +62,22 @@
     localStorage.setItem('ets2-plan',JSON.stringify({start:S.start,end:S.end,via:S.via}));
     render();
   }
-  function makeOption(n) { const opt=document.createElement('option'); opt.value=n.id; opt.textContent=n.name; return opt; }
+  function makeOption(n) {
+    const opt=document.createElement('option');opt.value=n.id;
+    const category=n.category?window.ETS2POI.categories[n.category]:null;
+    opt.textContent=(category?category.label+' · ':'')+n.name;
+    return opt;
+  }
+  function selectOptions(ids,current) {
+    const entries=S.nodes.slice();
+    const selected=S.nodesById.get(current);
+    if(selected?.category)entries.push(selected);
+    $(ids).replaceChildren(...entries.map(makeOption));
+    $(ids).value=current;
+  }
   function populate() {
-    for (const id of ['startSelect','finishSelect']) { const select=$(id); select.replaceChildren(...S.nodes.map(makeOption)); }
-    $('startSelect').value=S.start; $('finishSelect').value=S.end;
+    selectOptions('startSelect',S.start);
+    selectOptions('finishSelect',S.end);
     refreshWaypoints();
   }
   function refreshWaypoints() {
@@ -77,12 +89,59 @@
       const field=document.createElement('div');field.className='field';
       const lab=document.createElement('label');lab.textContent=`Через точку ${i+1}`;
       const select=document.createElement('select'); select.setAttribute('aria-label',`Промежуточная точка ${i+1}`);
-      select.append(...S.nodes.map(makeOption)); select.value=v;
+      select.append(...S.nodes.map(makeOption));
+      if(S.nodesById.get(v)?.category)select.append(makeOption(S.nodesById.get(v)));
+      select.value=v;
       select.addEventListener('change',e=>{S.via[i]=e.target.value;buildRoute();});
       const rem=document.createElement('button');rem.className='remove';rem.textContent='×';rem.title='Удалить точку';
       rem.addEventListener('click',()=>{S.via.splice(i,1);refreshWaypoints();buildRoute();});
       field.append(lab,select); route.append(icon,field);outer.append(route,rem); container.append(outer);
     });
+  }
+  function choosePoi(poi) {
+    if(!poi)return;
+    S.end=poi.id;
+    selectOptions('finishSelect',S.end);
+    S.zoom=Math.max(S.zoom,3);
+    const b=bounds(),scale=b.scale*S.zoom;
+    S.panX=-(poi.x-b.cx)*scale;
+    S.panY=-(poi.z-b.cz)*scale;
+    buildRoute();
+  }
+  function updatePoiResults() {
+    const list=$('poiResults'),count=$('poiCount');
+    list.replaceChildren();
+    const filter=$('poiCategory').value||'all';
+    const query=$('poiSearch').value.trim().toLocaleLowerCase('ru');
+    const matching=S.pois.filter(p=>{
+      const info=window.ETS2POI?.categories[p.category];
+      return (filter==='all'||p.category===filter)&&
+        (!query||p.name.toLocaleLowerCase('ru').includes(query)||
+         info?.label.toLocaleLowerCase('ru').includes(query));
+    });
+    count.textContent=S.pois.length
+      ? 'Найдено: '+matching.length+' · всего объектов: '+S.pois.length+'. Маршрут до ближайшего дорожного узла объекта.'
+      : 'В этом файле нет объектов. Создай новый JSON через --repack-only.';
+    for(const poi of matching.slice(0,30)){
+      const button=document.createElement('button');
+      button.type='button';button.className='poi-result';
+      const cat=window.ETS2POI.categories[poi.category];
+      const dot=document.createElement('span');
+      dot.className='poi-symbol';dot.style.background=cat.color;dot.textContent=cat.symbol;
+      const label=document.createElement('span');label.className='poi-result-label';
+      const title=document.createElement('strong');title.textContent=poi.name;
+      const subtitle=document.createElement('small');
+      subtitle.textContent=cat.label+' · '+Math.round(poi.x)+' / '+Math.round(poi.z)+
+        (poi.approximate?' · приблизительный подъезд':'');
+      label.append(title,subtitle);button.append(dot,label);
+      button.addEventListener('click',()=>choosePoi(poi));
+      list.append(button);
+    }
+    if(matching.length>30){
+      const hint=document.createElement('p');hint.className='hint';
+      hint.textContent='Показаны первые 30. Уточни категорию или название.';
+      list.append(hint);
+    }
   }
   function resize() {
     const rect=canvas.getBoundingClientRect();
@@ -256,7 +315,9 @@
     S.nodes=(S.realPack?S.realPack.nodes:S.graph.nodes).filter(
       n=>typeof n.id==='string'&&typeof n.name==='string'&&Number.isFinite(n.x)&&Number.isFinite(n.z));
     if(S.nodes.length<2)throw new Error('Недостаточно городов на карте');
-    S.nodesById=new Map(S.nodes.map(n=>[n.id,n]));
+    S.pois=S.realPack?.pois||[];
+    S.poiIndex=S.pois.length&&window.ETS2POI?window.ETS2POI.createIndex(S.pois):null;
+    S.nodesById=new Map([...S.nodes,...S.pois].map(n=>[n.id,n]));
     S.adj=new Map(S.nodes.map(n=>[n.id,[]]));
     if(!S.realPack){
       for(const [a,b] of S.graph.edges){const u=S.nodesById.get(a),v=S.nodesById.get(b);if(!u||!v)continue;
@@ -268,12 +329,13 @@
     S.via=Array.isArray(saved?.via)?saved.via.filter(id=>S.nodesById.has(id)).slice(0,8):[];
     S.zoom=1;S.panX=0;S.panY=0;
     populate();resize();buildRoute();
+    updatePoiResults();
     $('mapState').textContent=S.realPack?'РЕАЛЬНЫЙ ГРАФ':'ДЕМО-КАРТА';
     $('mapState').classList.toggle('real',!!S.realPack);
     $('mapTitle').textContent=S.graph.title||'Маршруты ETS2';
     $('mapNotice').textContent=S.graph.notice||'';
     $('mapImportStatus').textContent=S.realPack
-      ? `Загружено: ${S.nodes.length} городов, ${S.realPack.points.length} узлов, ${S.realPack.linkCount} направленных связей.`
+      ? `Загружено: ${S.nodes.length} городов, ${S.realPack.points.length} узлов, ${S.realPack.linkCount} направленных связей, ${S.pois.length} объектов.`
       : 'Используется демонстрационная схема. Реальная карта не загружена.';
   }
   const ACTIVE_MAP_KEY='ets2-active-map-profile';
@@ -375,6 +437,8 @@
       console.error(error);
     }
   }
+  $('poiCategory').addEventListener('change',()=>{updatePoiResults();render();});
+  $('poiSearch').addEventListener('input',updatePoiResults);
   $('mapFile').addEventListener('change',loadFile);
   $('savedMapSelect').addEventListener('change',async e=>{
     try {
@@ -419,6 +483,9 @@
   $('saveRelay').addEventListener('click',()=>{const v=$('relayUrl').value.trim().replace(/\/$/,'');if(v&&!v.startsWith('wss://')){status('Неверный адрес',false,'Сервер должен начинаться с wss://');return;}S.relayUrl=v;localStorage.setItem('ets2-relay-url',v);status('Адрес сохранён',false,'Теперь можно вводить код подключения.');});
   $('zoomIn').addEventListener('click',()=>zoom(1.25));$('zoomOut').addEventListener('click',()=>zoom(1/1.25));
   $('resetView').addEventListener('click',()=>{S.zoom=1;S.panX=0;S.panY=0;render();});
+  for(const [id,category] of Object.entries(window.ETS2POI.categories)){
+    $('poiCategory').add(new Option(category.label,id));
+  }
   canvas.addEventListener('pointerdown',onPointerDown);canvas.addEventListener('pointermove',onPointerMove);canvas.addEventListener('pointerup',onPointerUp);
   canvas.addEventListener('pointercancel',()=>{S.dragging=false;});
   canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoom(e.deltaY<0?1.12:1/1.12,{x:e.clientX-r.left,y:e.clientY-r.top});},{passive:false});
