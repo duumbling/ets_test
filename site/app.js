@@ -483,6 +483,8 @@
     if(blob.size>200*1024*1024)throw Error('Подробная карта слишком большая (максимум 200 МБ).');
     const magic=new Uint8Array(await blob.slice(0,2).arrayBuffer());
     const gzip=magic[0]===0x1f&&magic[1]===0x8b;
+    if(!gzip&&magic[0]===0x50&&magic[1]===0x4b)
+      throw Error('Это ZIP-архив. Выбери именно ets2-city-detail.json.gz — файл, который создал build_city_detail.py.');
     let raw;
     if(gzip){
       if(!window.DecompressionStream)throw Error('Для .gz нужен актуальный Chrome или Edge.');
@@ -591,7 +593,7 @@
           localStorage.setItem(ACTIVE_MAP_KEY,id);
           await updateSavedMaps(id);
           $('mapImportStatus').textContent+=
-            ' Карта сохранена в браузере и будет открываться автоматически.';
+            ' Шаг 1/2 готов: основная карта сохранена. Теперь загрузи ets2-city-detail.json.gz в шаге 2 ниже.';
         } catch(error) {
           console.warn('Map loaded but not saved in the browser',error);
           $('mapImportStatus').textContent+=
@@ -600,7 +602,11 @@
       } else {
         $('mapImportStatus').textContent+=' В этом браузере автоматическое сохранение недоступно.';
       }
-    }catch(error){$('mapImportStatus').textContent='Ошибка загрузки: '+error.message;console.error(error);}
+    }catch(error){
+      $('mapImportStatus').textContent='Не удалось загрузить основную карту: '+error.message+
+        (file.name.toLowerCase().endsWith('.zip')?' Выбери ets2-routepack.json, а не ZIP-архив.':'');
+      console.error(error);
+    }
     e.target.value='';
   }
   async function init(){
