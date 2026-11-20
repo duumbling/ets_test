@@ -10,6 +10,9 @@ on:
       - 'tools/patch_upstream_icons.py'
       - 'tools/test_icon_patch.py'
       - 'tools/fixtures/sii-comment-test.ts'
+      - 'tools/build_city_detail.py'
+      - 'tools/ets2-nav-convert.ts'
+      - 'tools/fixtures/geojson-city-smoke.ts'
       - '.github/workflows/map-cli-windows.yml'
   workflow_dispatch:
 
@@ -64,6 +67,20 @@ jobs:
           Copy-Item tools/fixtures/sii-comment-test.ts maps-upstream/sii-comment-test.ts
           Push-Location maps-upstream
           try { npx --no-install tsx sii-comment-test.ts; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } } finally { Pop-Location }
+      - name: Validate city detail exporter against real projection on Windows
+        shell: pwsh
+        run: |
+          Copy-Item tools/fixtures/geojson-city-smoke.ts maps-upstream/geojson-city-smoke.ts
+          Copy-Item tools/ets2-nav-convert.ts maps-upstream/ets2-nav-convert.ts
+          Push-Location maps-upstream
+          try {
+            npx --no-install tsx geojson-city-smoke.ts
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            npx --no-install tsx ets2-nav-convert.ts city-smoke.geojson city-smoke.json.gz
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            python -c "import gzip,json; p=json.load(gzip.open('city-smoke.json.gz','rt')); assert p['format']=='ets2-city-detail-v1'; assert len(p['geometry'])==2; assert abs(p['geometry'][0][1][2]-100)<2; print('City detail round-trip OK')"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally { Pop-Location }
       - name: Check CLI commands without ETS2 installation
         shell: pwsh
         working-directory: maps-upstream
