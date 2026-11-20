@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles.css">
   <script defer src="config.js"></script>
   <script defer src="routepack.js"></script>
+  <script defer src="pois.js"></script>
   <script defer src="road-cache.js"></script>
   <script defer src="map-storage.js"></script>
   <script defer src="app.js"></script>
@@ -16,7 +17,7 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.5</span></div>
+      <div class="brand"><span class="brand-symbol">↗</span><span>ETS2 <strong>NAVIGATOR</strong></span><span class="version">ALPHA · 0.6</span></div>
       <div id="connectionPill" class="connection-pill"><span class="dot"></span><span id="connectionLabel">Не подключено</span></div>
     </header>
     <main class="layout">
@@ -55,6 +56,17 @@
           <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/MAP_PROFILES.md" target="_blank" rel="noopener noreferrer">Сохранённые карты, DLC и простой сборщик Windows</a></p>
           <p class="hint"><a href="https://github.com/duumbling/ets_test/blob/main/docs/REAL_MAP.md" target="_blank" rel="noopener noreferrer">Как создать файл из ETS2</a></p>
         </section>
+        <section class="panel poi-panel">
+          <div class="eyebrow">МЕСТА НА КАРТЕ</div>
+          <h2>Куда заехать</h2>
+          <p class="muted">Реальные игровые точки: заправки, ремонт, стоянки, предприятия и другие места — в городе и на трассе. Приблизь карту для отображения значков.</p>
+          <label for="poiCategory">Категория объектов</label>
+          <select id="poiCategory"><option value="all">Все объекты</option></select>
+          <label for="poiSearch" style="margin-top:12px">Поиск по названию</label>
+          <input id="poiSearch" type="search" placeholder="Например, заправка, сервис, дилер">
+          <p class="hint" id="poiCount" aria-live="polite">Нужна карта с объектами. Старый JSON показывает только города и дороги.</p>
+          <div id="poiResults" class="poi-results"></div>
+        </section>
         <section class="panel route-panel">
           <div class="panel-heading"><div><div class="eyebrow">ПЛАНИРОВЩИК</div><h2>Маршрут</h2></div><span class="mini-tag">НА КАРТЕ</span></div>
           <div class="route-input"><span class="point-icon start-icon"></span><div class="field"><label for="startSelect">Откуда</label><select id="startSelect"></select></div></div>
@@ -63,7 +75,7 @@
           <div class="row-buttons"><button id="addWaypoint" class="secondary">+ Добавить точку</button><button id="swapRoute" class="icon-btn" title="Поменять местами начало и конец" aria-label="Поменять местами">⇅</button></div>
           <div class="route-summary"><span id="routeStats">Маршрут не выбран</span><span id="routeType">Демонстрация</span></div>
           <button id="copyRoute" class="primary full">Скопировать маршрут</button>
-          <p class="hint">Можно нажимать на города на карте: выбранный город станет пунктом назначения.</p>
+          <p class="hint">Можно нажимать на города и значки объектов на карте: выбранная точка станет пунктом назначения. Подъезд к объекту рассчитывается приблизительно.</p>
         </section>
         <section class="panel telemetry-panel"><div class="eyebrow">ПРИБОРЫ</div><div class="telemetry-grid"><div><div class="telemetry-value"><span id="speed">—</span><small>км/ч</small></div><div class="telemetry-label">Скорость</div></div><div><div class="telemetry-value"><span id="coord">—</span></div><div class="telemetry-label">Координаты ETS2</div></div></div><div class="hint" id="liveHint">Ожидаем данные из игры</div></section>
       </aside>
