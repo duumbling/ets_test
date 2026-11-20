@@ -1,59 +1,51 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0a1723">
-<title>ETS2 Navigator — готовая карта онлайн</title>
+<title>ETS2 Navigator — готовая карта без сканирования игры</title>
 <link rel="stylesheet" href="vendor/maplibre-gl-5.24.0.css">
 <link rel="stylesheet" href="online-map.css">
 <script defer src="vendor/maplibre-gl-5.24.0.js"></script>
 <script defer src="vendor/pmtiles-4.5.0.js"></script>
 <script defer src="vendor/proj4-2.15.0.js"></script>
+<script defer src="routepack.js"></script>
 <script defer src="pois.js"></script>
 <script defer src="poi-symbols.js"></script>
-<script defer src="remote-graph.js"></script>
-<script defer src="online-map.js"></script>
+<script defer src="ready-map.js"></script>
 </head>
 <body>
-<header class="top">
-  <div class="brand"><a href="./">↗ ETS2 NAVIGATOR</a><span class="version">ГОТОВЫЕ КАРТЫ · ПРЕДПРОСМОТР</span></div>
-  <a class="back" href="./">Мой навигатор</a>
-</header>
+<header class="top"><div class="brand"><a href="./">↗ ETS2 NAVIGATOR</a><span class="version">ГОТОВАЯ КАРТА · ЛОКАЛЬНО</span></div><a class="back" href="./">Основной навигатор</a></header>
 <main class="layout">
   <aside class="sidebar">
-    <div class="headline">Карта без сканирования ETS2</div>
-    <p>Готовые векторные дороги, перекрёстки, города и объекты игры. Карта загружается напрямую из каталога <a target="_blank" rel="noopener noreferrer" href="https://github.com/Nethercap/truck-companion">Truck Dash</a>.</p>
-    <label for="mapVariant">Набор карт</label>
-    <select id="mapVariant">
-      <option value="ets2">ETS2 1.62 · базовая игра + карта DLC</option>
-      <option value="ets2_tmp">ETS2 1.62 · TruckersMP</option>
-      <option value="ets2_promods">ETS2 1.61 · ProMods Europe + расширения</option>
-      <option value="ets2_promods_rusmap">ETS2 1.61 · ProMods + RusMap</option>
-    </select>
-    <div id="variantInfo" class="details">Обновлено 10.11.2026 · карта ETS2 1.62.2.1</div>
-    <button id="loadMap" class="primary" type="button">Открыть готовую карту</button>
-    <p id="mapStatus" role="status" aria-live="polite">Выбери набор карт и нажми кнопку. Файлы игры не нужны.</p>
+    <div class="headline">Дороги ETS2 без сканирования файлов игры</div>
+    <p>Используем готовый файл карты с GitHub Releases. Он читается <strong>прямо в браузере</strong>; на наш GitHub Pages игровые данные не загружаются.</p>
     <div class="divider"></div>
-    <h2>Построить маршрут</h2>
+    <h2>Шаг 1 · Готовая карта улиц</h2>
+    <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/NekoSuneProjects/OpenHaul/releases/tag/map-data">Скачать ETS2 PMTiles из релиза OpenHaul</a> (около 22,6 МБ, 03.10.2026). Это доступный визуальный набор, но <strong>его соответствие всем DLC актуальной ETS2 не подтверждено</strong>.</p>
+    <label for="tileFile">Загруженный файл .pmtiles</label>
+    <input id="tileFile" type="file" accept=".pmtiles,application/octet-stream">
+    <p id="mapStatus" role="status" aria-live="polite">Сначала выбери скачанный файл ETS2 .pmtiles.</p>
+    <div class="divider"></div>
+    <h2>Шаг 2 · Маршруты (необязательно)</h2>
+    <p>Если у тебя уже есть <code>ets2-routepack.json</code>, можешь добавить его для прокладки маршрутов. Новый поиск файлов игры не нужен. Это прежний приблизительный граф, а не точный GPS ETS2.</p>
+    <label for="routepackFile">Файл маршрутов .json</label>
+    <input id="routepackFile" type="file" accept=".json,application/json">
     <label for="fromCity">Откуда</label>
-    <select id="fromCity" disabled><option>Сначала загрузи карту</option></select>
+    <select id="fromCity" disabled><option>Сначала выбери граф</option></select>
     <label for="toCity">Куда</label>
-    <select id="toCity" disabled><option>Сначала загрузи карту</option></select>
-    <p id="poiDestination" class="small">Или приблизь карту и нажми на значок заправки либо другого объекта.</p>
+    <select id="toCity" disabled><option>Сначала выбери граф</option></select>
     <button id="routeBtn" type="button" disabled>Построить маршрут</button>
-    <p id="routeStatus" class="small" role="status">Дорожный граф загружается отдельно от изображения карты.</p>
+    <p id="routeStatus" class="small" role="status" aria-live="polite">Граф ещё не выбран.</p>
     <div class="divider"></div>
-    <h2>Ограничения</h2>
-    <p class="small">Это экспериментальное подключение к стороннему публичному источнику. Если сервер или доступ из браузера не работают, карта покажет ошибку. Данные не копируются в наш GitHub.</p>
-    <p class="small">Картинка дорог может точнее соответствовать ETS2, но даже этот граф не гарантирует полное совпадение маршрута с внутриигровым GPS, особенно в сложных префабах. ProMods-варианты рассчитаны на другую версию игры.</p>
-    <a class="small" href="https://github.com/duumbling/ets_test/blob/main/docs/READY_MAP_SOURCES.md" target="_blank" rel="noopener noreferrer">Сравнение источников и версий DLC</a>
-    <div class="credits">Картографические данные: <a target="_blank" rel="noopener noreferrer" href="https://github.com/Nethercap/truck-companion">Truck Dash / Nethercap</a>, на основе SCS Software, ts-map и truckermudgeon/maps. MapLibre, PMTiles, proj4 — независимые компоненты. Используй с соблюдением прав правообладателей.</div>
+    <h2>Почему не Truck Dash напрямую?</h2>
+    <p>Разработчик <a target="_blank" rel="noopener noreferrer" href="https://trucksim-dash.com/ru/">Truck Dash</a> публикует отличную готовую карту ETS2 1.62 и дорожный граф, но его собственный сервер доступен только с его сайта. Использовать его как бесплатный CDN для нашего проекта нельзя.</p>
+    <p>Нужна <strong>готовая карта и полноценная маршрутизация сразу</strong>? Тогда удобнее попробовать <a target="_blank" rel="noopener noreferrer" href="https://trucksim-dash.com/">сам Truck Dash</a>. Его карта может быть ближе к игре, чем наша экспериментальная.</p>
+    <p class="small">Визуальные карты из сторонних релизов могут не совпадать с версией ETS2 или DLC. Не копируй и не публикуй эти файлы на своём сервере без проверки прав SCS Software и авторов карты.</p>
+    <a class="small" href="https://github.com/duumbling/ets_test/blob/main/docs/READY_MAP_SOURCES.md" target="_blank" rel="noopener noreferrer">Проверенные источники и ограничения</a>
+    <div class="credits">© SCS Software (игровые данные). Визуальный набор: OpenHaul / TruckSim Maps. Браузерные библиотеки: MapLibre, PMTiles, proj4. Все файлы остаются на твоём устройстве.</div>
   </aside>
-  <section class="map-panel">
-    <div id="map" aria-label="Интерактивная карта ETS2"></div>
-    <div id="mapHint">Загрузи готовую карту, затем приближай города колесом мыши. Файлы ETS2 не нужны.</div>
-  </section>
+  <section class="map-panel"><div id="map"></div><div id="mapHint">Выбери готовый .pmtiles, чтобы рассматривать города, улицы и перекрёстки. Маршрутный граф добавляется отдельно.</div></section>
 </main>
 </body>
 </html>
