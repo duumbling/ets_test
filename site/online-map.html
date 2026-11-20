@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a1723">
+<title>ETS2 Navigator — готовая карта онлайн</title>
+<link rel="stylesheet" href="vendor/maplibre-gl-5.24.0.css">
+<link rel="stylesheet" href="online-map.css">
+<script defer src="vendor/maplibre-gl-5.24.0.js"></script>
+<script defer src="vendor/pmtiles-4.5.0.js"></script>
+<script defer src="vendor/proj4-2.15.0.js"></script>
+<script defer src="pois.js"></script>
+<script defer src="poi-symbols.js"></script>
+<script defer src="remote-graph.js"></script>
+<script defer src="online-map.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><a href="./">↗ ETS2 NAVIGATOR</a><span class="version">ГОТОВЫЕ КАРТЫ · ПРЕДПРОСМОТР</span></div>
+  <a class="back" href="./">Мой навигатор</a>
+</header>
+<main class="layout">
+  <aside class="sidebar">
+    <div class="headline">Карта без сканирования ETS2</div>
+    <p>Готовые векторные дороги, перекрёстки, города и объекты игры. Карта загружается напрямую из каталога <a target="_blank" rel="noopener noreferrer" href="https://github.com/Nethercap/truck-companion">Truck Dash</a>.</p>
+    <label for="mapVariant">Набор карт</label>
+    <select id="mapVariant">
+      <option value="ets2">ETS2 1.62 · базовая игра + карта DLC</option>
+      <option value="ets2_tmp">ETS2 1.62 · TruckersMP</option>
+      <option value="ets2_promods">ETS2 1.61 · ProMods Europe + расширения</option>
+      <option value="ets2_promods_rusmap">ETS2 1.61 · ProMods + RusMap</option>
+    </select>
+    <div id="variantInfo" class="details">Обновлено 10.11.2026 · карта ETS2 1.62.2.1</div>
+    <button id="loadMap" class="primary" type="button">Открыть готовую карту</button>
+    <p id="mapStatus" role="status" aria-live="polite">Выбери набор карт и нажми кнопку. Файлы игры не нужны.</p>
+    <div class="divider"></div>
+    <h2>Построить маршрут</h2>
+    <label for="fromCity">Откуда</label>
+    <select id="fromCity" disabled><option>Сначала загрузи карту</option></select>
+    <label for="toCity">Куда</label>
+    <select id="toCity" disabled><option>Сначала загрузи карту</option></select>
+    <p id="poiDestination" class="small">Или приблизь карту и нажми на значок заправки либо другого объекта.</p>
+    <button id="routeBtn" type="button" disabled>Построить маршрут</button>
+    <p id="routeStatus" class="small" role="status">Дорожный граф загружается отдельно от изображения карты.</p>
+    <div class="divider"></div>
+    <h2>Ограничения</h2>
+    <p class="small">Это экспериментальное подключение к стороннему публичному источнику. Если сервер или доступ из браузера не работают, карта покажет ошибку. Данные не копируются в наш GitHub.</p>
+    <p class="small">Картинка дорог может точнее соответствовать ETS2, но даже этот граф не гарантирует полное совпадение маршрута с внутриигровым GPS, особенно в сложных префабах. ProMods-варианты рассчитаны на другую версию игры.</p>
+    <a class="small" href="https://github.com/duumbling/ets_test/blob/main/docs/READY_MAP_SOURCES.md" target="_blank" rel="noopener noreferrer">Сравнение источников и версий DLC</a>
+    <div class="credits">Картографические данные: <a target="_blank" rel="noopener noreferrer" href="https://github.com/Nethercap/truck-companion">Truck Dash / Nethercap</a>, на основе SCS Software, ts-map и truckermudgeon/maps. MapLibre, PMTiles, proj4 — независимые компоненты. Используй с соблюдением прав правообладателей.</div>
+  </aside>
+  <section class="map-panel">
+    <div id="map" aria-label="Интерактивная карта ETS2"></div>
+    <div id="mapHint">Загрузи готовую карту, затем приближай города колесом мыши. Файлы ETS2 не нужны.</div>
+  </section>
+</main>
+</body>
+</html>
