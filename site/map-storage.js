@@ -3,7 +3,8 @@
   'use strict';
   const DB = 'ets2-navigator-offline-maps';
   const STORE = 'routepacks';
-  const VERSION = 1;
+  const DETAILS = 'details';
+  const VERSION = 2;
 
   function database() {
     return new Promise((resolve, reject) => {
@@ -14,6 +15,9 @@
         if (!db.objectStoreNames.contains(STORE)) {
           db.createObjectStore(STORE, { keyPath: 'id' });
         }
+        if (!db.objectStoreNames.contains(DETAILS)) {
+          db.createObjectStore(DETAILS, { keyPath: 'id' });
+        }
       };
       request.onerror = () => reject(request.error || new Error('Не удалось открыть хранилище карт'));
       request.onblocked = () => reject(new Error('Хранилище заблокировано другой вкладкой'));
@@ -21,13 +25,13 @@
     });
   }
 
-  async function transaction(mode, callback) {
+  async function transaction(mode, callback, storeName = STORE) {
     const db = await database();
     return new Promise((resolve, reject) => {
       let result;
       let finished = false;
-      const tx = db.transaction(STORE, mode);
-      const store = tx.objectStore(STORE);
+      const tx = db.transaction(storeName, mode);
+      const store = tx.objectStore(storeName);
       try {
         const req = callback(store);
         req.onsuccess = () => { result = req.result; };
@@ -64,9 +68,20 @@
       .sort((a, b) => b.savedAt - a.savedAt);
   }
 
+  async function saveDetail(id, blob) {
+    if (!id || !(blob instanceof Blob)) throw new Error('Некорректный файл подробной карты');
+    return transaction('readwrite', store => store.put({id, blob, savedAt:Date.now()}), DETAILS);
+  }
+  async function getDetail(id) {
+    return transaction('readonly', store => store.get(id), DETAILS);
+  }
+  async function removeDetail(id) {
+    return transaction('readwrite', store => store.delete(id), DETAILS);
+  }
   async function remove(id) {
-    return transaction('readwrite', store => store.delete(id));
+    await transaction('readwrite', store => store.delete(id));
+    await removeDetail(id);
   }
 
-  root.ETS2MapStorage = { save, get, list, remove };
+  root.ETS2MapStorage = { save, get, list, remove, saveDetail, getDetail, removeDetail };
 })(typeof window !== 'undefined' ? window : globalThis);
