@@ -1,7 +1,8 @@
 /* ETS2 street-level renderer. Uses actual game-world roads and area polygons.
- * v2 distinguishes playable road geometry from approximate prefab-internal
- * paths, avoiding diamond-shaped fake intersections in the visible street map.
- * v1 detail files remain readable; re-export for the corrected junction layer.
+ * Both ordinary roads (kind 0) and prefab road strings (kind 3) are real road
+ * geometry. Prefab polygons are painted first; connector roads are drawn above
+ * them so intersections do not hide their own connecting streets.
+ * v1 and v2 detail files remain readable.
  */
 (function(root,factory){
   const api=factory();
@@ -84,17 +85,24 @@
           ctx.lineTo(left+(p[i]-cx)*scale,top+(p[i+1]-cz)*scale);
       }
       ctx.save();
-      // Map areas first; these are decorative backgrounds, not street edges.
+      // Draw all filled map surfaces BEFORE the road network. The old order
+      // painted prefab polygons over their own connecting road segments,
+      // hiding the exact pieces needed to join streets at intersections.
       ctx.fillStyle='#203545';
       ctx.beginPath();
       for(const f of list)if(f.kind===2){trace(f);ctx.closePath();}
       ctx.fill();
-      // Draw actual road geometry with a casing and a scale-aware width.
-      // Road widths are ETS2 game-coordinate units, not real-world meters.
-      // Quantize into bins so each frame uses at most a handful of strokes.
+      ctx.beginPath();
+      for(const f of list)if(f.kind===1){trace(f);ctx.closePath();}
+      ctx.fillStyle='#728695';ctx.fill();
+
+      // Both kinds 0 and 3 are genuine road geometry. Kind 3 is generated
+      // from prefab road-map points (junction interiors and connectors), not
+      // debug/navigation hints. Hiding it disconnects otherwise valid roads.
+      // Draw it above the prefab surface so every connector remains visible.
       const groups=new Map();
       for(const f of list){
-        if(f.kind!==0)continue;
+        if(f.kind!==0&&f.kind!==3)continue;
         const px=clamp(4,Math.round(clamp(7,f.width,30)*scale*1.15),30);
         if(!groups.has(px))groups.set(px,[]);
         groups.get(px).push(f);
@@ -105,15 +113,6 @@
         ctx.lineWidth=width+2.5;ctx.strokeStyle='#182b39';ctx.stroke();
         ctx.lineWidth=width;ctx.strokeStyle='#7e909e';ctx.stroke();
       }
-      // Prefab polygons represent the actual drawn surface of junctions.
-      // Unlike the synthesized internal road strings, these do not draw
-      // spurious triangular/diamond links inside intersections.
-      ctx.beginPath();
-      for(const f of list)if(f.kind===1){trace(f);ctx.closePath();}
-      ctx.fillStyle='#728695';ctx.fill();
-      // The generated "prefab" road-string paths (kind 3) are consciously
-      // excluded: they describe estimated travel lanes, not map streets.
-      // v1 exports mix both kinds and cannot be separated without re-export.
       ctx.restore();
       return list.length;
     }
