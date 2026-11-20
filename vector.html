@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1320">
+<title>ETS2 Atlas · Векторная карта</title>
+<meta name="description" content="Векторная карта Euro Truck Simulator 2: реальные дороги, перекрёстки, города и увеличенный масштаб без размытия PNG.">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0a1522;color:#edf5fb}
+:root{--accent:#e8c277;--muted:#9caebd;--line:#2d455b}
+.app{display:grid;grid-template-columns:340px minmax(0,1fr);height:100dvh;min-height:540px}
+.sidebar{z-index:2;background:linear-gradient(155deg,#1b2b3d,#0c1724);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:auto;padding:24px;gap:18px}
+.brand{font-weight:900;letter-spacing:.06em;font-size:18px}.brand small{display:block;color:var(--accent);letter-spacing:.12em;font-size:10px;margin-top:4px}
+.back{font-size:12px;color:var(--muted);text-decoration:none}.back:hover{color:white}
+.pill{color:var(--accent);font-size:10px;letter-spacing:.17em;text-transform:uppercase;font-weight:900}
+h1{font-size:27px;line-height:1.15;margin:8px 0 12px;letter-spacing:-.035em}
+p{font-size:12px;line-height:1.7;color:var(--muted);margin:0}
+.section{padding-top:17px;border-top:1px solid var(--line)}
+.step{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;margin-bottom:10px}
+.step span{width:23px;height:23px;display:grid;place-items:center;background:var(--accent);color:#142032;border-radius:7px;font-size:12px}
+.button{display:block;width:100%;border-radius:11px;background:var(--accent);color:#142032;padding:12px 14px;font:800 13px inherit;text-decoration:none;text-align:center;border:0;cursor:pointer}
+.button:hover{filter:brightness(1.08)}
+.button.ghost{background:#24384c;color:#e4edf7;border:1px solid #40566e}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+input[type=file]{width:100%;padding:10px 6px;color:#dfe8f4;font-size:12px;background:#0c1826;border:1px dashed #54718a;border-radius:10px}
+input[type=file]::file-selector-button{background:#31455c;color:white;border:0;border-radius:6px;padding:8px;font-weight:700;cursor:pointer}
+label{display:block;font-size:12px;font-weight:700;color:#dce7f3;margin-bottom:9px}
+.info{background:#0f2032;border:1px solid #3b5368;border-radius:11px;padding:13px;line-height:1.6;font-size:12px;color:#d0dce8;white-space:pre-wrap;word-break:break-word}
+.info.error{border-color:#995c50;background:#322326;color:#ffd0c7}.info.success{border-color:#50715c;background:#132b27;color:#cdf2d7}
+.note{border:1px solid #53462e;color:#e4d2ad;background:#2a271e;border-radius:10px;padding:12px;font-size:11px;line-height:1.6}
+.foot{margin-top:auto;font-size:10px;color:#90a1b3;line-height:1.65}.foot a{color:#e1c899}
+.mapbox{position:relative;min-width:0;overflow:hidden}.map{position:absolute;inset:0;background:#152b40}
+.overlay{z-index:4;position:absolute;top:17px;left:17px;max-width:min(380px,calc(100% - 34px));pointer-events:none;background:#111e30d9;border:1px solid #43586d;border-radius:12px;padding:12px 16px;backdrop-filter:blur(12px)}
+.overlay strong{display:block;font-size:12px}.overlay small{display:block;color:#b4c3d1;font-size:11px;margin-top:4px}
+.welcome{position:absolute;inset:0;z-index:3;background:#0e2030b8;display:flex;align-items:center;justify-content:center;text-align:center;pointer-events:none;padding:24px}
+.welcome>div{max-width:400px;background:#102338e8;border:1px solid #4b6478;border-radius:20px;padding:26px;box-shadow:0 12px 38px #0004}
+.welcome h2{font-size:22px;margin:0 0 12px}.welcome p{font-size:13px}
+.hidden{display:none}
+.maplibregl-control-container .maplibregl-ctrl-group{background:#1b2d40}.maplibregl-ctrl-group button{filter:invert(1)}
+.maplibregl-popup-content{background:#162b40;color:#fff;border-radius:11px}.maplibregl-popup-tip{border-top-color:#162b40!important}
+@media(max-width:760px){.app{display:flex;flex-direction:column;height:100dvh}.sidebar{flex:none;height:auto;max-height:44%;padding:14px;gap:10px}.brand{font-size:16px}.sidebar h1{font-size:20px}.section{padding-top:10px}.mapbox{min-height:56%;flex:1}.overlay{top:10px;left:10px}.welcome h2{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand">↗ ETS2 ATLAS <small>ВЕКТОРНАЯ КАРТА · BETA</small></div>
+<a class="back" href="./">← Растровая карта (запасной вариант)</a>
+<div><div class="pill">Высокая детализация</div><h1>Дороги остаются чёткими при приближении</h1><p>Векторная геометрия ETS2 без растянутых PNG. Для работы нужна готовая карта формата PMTiles, опубликованная OpenHaul.</p></div>
+<div class="section">
+<div class="step"><span>1</span> Получить векторную карту</div>
+<a class="button" href="https://github.com/NekoSuneProjects/OpenHaul/releases/download/map-data/ets2-a24c1761d59c69b02cbe811a6ee62d6e8be457b804b1207b9cc86f9d06d8de3e.pmtiles" target="_blank" rel="noopener noreferrer">Скачать ETS2 PMTiles · 22,6 МБ</a>
+<p style="margin-top:9px">Источник — релиз <a href="https://github.com/NekoSuneProjects/OpenHaul/releases/tag/map-data" style="color:#e1c899" target="_blank" rel="noopener">OpenHaul</a>. Карта хранится у тебя, на наш сервер не загружается.</p>
+</div>
+<div class="section">
+<div class="step"><span>2</span> Открыть скачанный файл</div>
+<label for="file">Выбери файл .pmtiles или перетащи его в область карты</label>
+<input id="file" type="file" accept=".pmtiles,application/octet-stream">
+<p style="margin-top:10px">Файл автоматически сохраняется в браузере. Повторно выбирать его при следующих посещениях не потребуется, пока не очищены данные сайта.</p>
+</div>
+<div class="section">
+<div class="step"><span>3</span> Изучать карту</div>
+<div class="controls"><button id="zoom-city" class="button ghost" type="button">Приблизить +</button><button id="zoom-home" class="button ghost" type="button">Вся Европа</button></div>
+<p style="margin-top:10px">Колесо мыши и жесты масштабируют карту. Клик ставит метку, по которой можно скопировать ссылку.</p>
+<div class="controls" style="margin-top:12px"><button id="copy" class="button ghost" disabled type="button">Ссылка на точку</button><button id="clear" class="button ghost" disabled type="button">Убрать метку</button></div>
+</div>
+<div class="info" id="status" role="status" aria-live="polite">Проверяю сохранённую карту…</div>
+<div class="note">Векторная карта не гарантирует полное покрытие актуальных DLC и сторонних модов (ProMods, RusMap). Пока это просмотрщик дорог и городов, не GPS: точные маршруты требуют отдельного дорожного графа.</div>
+<div class="foot">© SCS Software — игровые данные. Источник векторных файлов: <a href="https://github.com/NekoSuneProjects/OpenHaul">OpenHaul</a> / TruckSim Maps. Библиотеки: MapLibre GL JS, PMTiles и Proj4. Этот проект не связан с SCS Software.</div>
+</aside>
+<main class="mapbox" id="mapbox">
+<div id="map" class="map"></div>
+<div class="overlay"><strong>ETS2 · ВЕКТОРНАЯ КАРТА</strong><small id="mapmeta">Ожидание PMTiles · доступен масштаб до 22</small></div>
+<div class="welcome" id="welcome"><div><h2>Подробная карта ETS2</h2><p>Скачай готовый файл в меню слева и выбери его. Разметка дорог будет рисоваться векторно, без растягивания PNG.</p></div></div>
+</main>
+</div>
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
+<script src="https://unpkg.com/proj4@2.15.0/dist/proj4.js"></script>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+let map=null, protocol=null, fileMap=null, latestPoint=null, activeFileName='';
+const EARTH=6370997,DEGREE=EARTH*Math.PI/180;
+function notify(text,error=false,success=false){
+ const e=$('status');e.textContent=text;e.className='info'+(error?' error':success?' success':'');
+}
+const DB='ets2-atlas-vector-map', STORE='maps';
+function openDb(){
+ return new Promise((resolve,reject)=>{
+  if(!window.indexedDB)return reject(Error('Хранилище браузера недоступно'));
+  const req=indexedDB.open(DB,1);
+  req.onupgradeneeded=()=>req.result.createObjectStore(STORE);
+  req.onsuccess=()=>resolve(req.result);
+  req.onerror=()=>reject(req.error);
+ });
+}
+async function getStored(){
+ const db=await openDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readonly');const rq=tx.objectStore(STORE).get('active');
+  rq.onsuccess=()=>resolve(rq.result);rq.onerror=()=>reject(rq.error);tx.oncomplete=()=>db.close();tx.onerror=()=>db.close();
+ });
+}
+async function saveStored(file){
+ const db=await openDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put({data:file,name:file.name},'active');
+  tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};
+ });
+}
+function markers(){return {type:'FeatureCollection',features:latestPoint?[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:latestPoint}}]:[]};}
+function makeStyle(layer,url){
+ const roadWidth=['interpolate',['linear'],['zoom'],4,0.55,7,1.2,10,2.6,13,5.8,16,11,19,21,22,38];
+ return {
+  version:8,
+  glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sources:{roads:{type:'vector',url},picked:{type:'geojson',data:markers()}},
+  layers:[
+   {id:'background',type:'background',paint:{'background-color':'#101e2e'}},
+   {id:'terrain',type:'fill',source:'roads','source-layer':layer,filter:['==',['get','type'],'mapArea'],paint:{'fill-color':['match',['get','color'],0,'#273e50',1,'#435769',2,'#1a2d3d',3,'#294435','#294053'],'fill-opacity':0.8}},
+   {id:'prefabs',type:'fill',source:'roads','source-layer':layer,filter:['==',['get','type'],'prefab'],paint:{'fill-color':'#6c8492','fill-opacity':0.86}},
+   {id:'roads-casing',type:'line',source:'roads','source-layer':layer,filter:['==',['get','type'],'road'],layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#1b2936','line-width':['+',roadWidth,3.5]}},
+   {id:'roads',type:'line',source:'roads','source-layer':layer,filter:['==',['get','type'],'road'],layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#b9cbd3','line-width':roadWidth}},
+   {id:'cities',type:'symbol',source:'roads','source-layer':layer,filter:['==',['get','type'],'city'],layout:{'text-field':['coalesce',['get','name'],''],'text-font':['Open Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],4,10,9,15,16,18],'text-allow-overlap':false},paint:{'text-color':'#f6f6e9','text-halo-color':'#0d2032','text-halo-width':1.5}},
+   {id:'poi',type:'circle',source:'roads','source-layer':layer,minzoom:8,filter:['==',['get','type'],'poi'],paint:{'circle-radius':['interpolate',['linear'],['zoom'],8,2,15,5],'circle-color':'#e8c277','circle-stroke-color':'#243342','circle-stroke-width':1.7}},
+   {id:'pick-ring',type:'circle',source:'picked',paint:{'circle-radius':10,'circle-color':'#e8c277','circle-stroke-color':'white','circle-stroke-width':3}}
+  ]
+ };
+}
+function initializeMap(pm,layer,fileName){
+ const sourceURL='pmtiles://'+pm.source.getKey();
+ if(map){map.remove();map=null;}
+ if(!protocol){protocol=new pmtiles.Protocol();maplibregl.addProtocol('pmtiles',protocol.tile);}
+ protocol.add(pm);fileMap=pm;
+ const urlParams=new URLSearchParams(location.search);
+ const lon=Number(urlParams.get('lon')),lat=Number(urlParams.get('lat')),z=Number(urlParams.get('z'));
+ const saved=urlParams.has('lon')&&urlParams.has('lat')&&Number.isFinite(lon)&&Number.isFinite(lat)&&lon>=-180&&lon<=180&&lat>=-85&&lat<=85;
+ if(saved)latestPoint=[lon,lat];
+ map=new maplibregl.Map({
+  container:'map',style:makeStyle(layer,sourceURL),center:saved?[lon,lat]:[15,51],
+  zoom:saved&&Number.isFinite(z)?Math.max(2,Math.min(22,z)):4.7,
+  minZoom:2,maxZoom:22,maxPitch:0,attributionControl:false,fadeDuration:0
+ });
+ map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+ map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'© SCS Software · OpenHaul / TruckSim Maps'}),'bottom-left');
+ map.on('load',()=>{
+  $('welcome').classList.add('hidden');
+  $('mapmeta').textContent=fileName+' · вектор · масштаб до 22';
+  notify('Векторная карта загружена. Приближай дороги: их линии остаются чёткими. Данные считаны локально из '+fileName+'.',false,true);
+  if(saved){$('copy').disabled=false;$('clear').disabled=false;map.getSource('picked')?.setData(markers());}
+ });
+ map.on('click',evt=>{
+  latestPoint=[evt.lngLat.lng,evt.lngLat.lat];
+  map.getSource('picked')?.setData(markers());
+  $('copy').disabled=false;$('clear').disabled=false;
+  new maplibregl.Popup({closeButton:true}).setLngLat(latestPoint).setText('Метка: '+latestPoint.map(v=>v.toFixed(5)).join(', ')).addTo(map);
+ });
+ map.on('click','poi',evt=>{
+  const ft=evt.features?.[0];
+  if(ft){const name=ft.properties?.name||ft.properties?.sprite||'Объект ETS2';new maplibregl.Popup().setLngLat(evt.lngLat).setText(name).addTo(map);}
+ });
+ map.on('error',evt=>{
+  const reason=evt.error?.message||String(evt.error||'');
+  console.error('Vector map error:',reason);
+  if(!$('welcome').classList.contains('hidden'))notify('Не удалось отобразить карту: '+reason.slice(0,190),true);
+ });
+}
+async function loadFile(file,persist){
+ if(!file)return;
+ if(!/\.pmtiles$/i.test(file.name||''))return notify('Нужен файл с расширением .pmtiles.',true);
+ notify('Читаю заголовок PMTiles и слои векторной карты…');
+ try{
+  if(!window.maplibregl||!window.pmtiles||!window.proj4)throw Error('Не загрузились библиотеки MapLibre, PMTiles или Proj4. Проверь интернет.');
+  const src=new pmtiles.FileSource(file),pm=new pmtiles.PMTiles(src);
+  const [head,meta]=await Promise.all([pm.getHeader(),pm.getMetadata()]);
+  if(head.tileType!==1)throw Error('Файл содержит не векторные тайлы. Нужен ETS2 PMTiles из релиза OpenHaul.');
+  const layers=(meta.vector_layers||[]).map(x=>String(x.id||'')).filter(Boolean);
+  const layer=['ets2','europe'].find(x=>layers.includes(x))||layers[0];
+  if(!layer)throw Error('В архиве отсутствует векторный слой. Проверь выбранный файл.');
+  activeFileName=file.name;
+  initializeMap(pm,layer,file.name);
+  if(persist){try{await saveStored(file);}catch(err){notify('Карта открыта, но сохранение в браузере не удалось: '+err.message,true);}}
+ }catch(err){notify('Ошибка: '+err.message,true);console.error(err);}
+}
+$('file').addEventListener('change',e=>loadFile(e.target.files?.[0],true));
+$('zoom-city').addEventListener('click',()=>map?map.zoomTo(Math.min(22,map.getZoom()+2),{duration:350}):notify('Сначала загрузите карту .pmtiles.'));
+$('zoom-home').addEventListener('click',()=>map?map.flyTo({center:[15,51],zoom:4.7}):notify('Сначала загрузите карту .pmtiles.'));
+$('clear').addEventListener('click',()=>{
+ latestPoint=null;
+ if(map?.getSource('picked'))map.getSource('picked').setData(markers());
+ $('copy').disabled=$('clear').disabled=true;
+});
+$('copy').addEventListener('click',async()=>{
+ if(!latestPoint||!map)return;
+ const url=new URL(location.href);url.searchParams.set('lon',latestPoint[0].toFixed(6));
+ url.searchParams.set('lat',latestPoint[1].toFixed(6));url.searchParams.set('z',map.getZoom().toFixed(2));
+ try{await navigator.clipboard.writeText(url.toString());notify('Ссылка на выбранную точку скопирована.',false,true);}
+ catch{window.prompt('Скопируй ссылку:',url.toString());}
+});
+const mapbox=$('mapbox');
+mapbox.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';});
+mapbox.addEventListener('drop',e=>{e.preventDefault();const file=[...e.dataTransfer.files].find(f=>/\.pmtiles$/i.test(f.name));if(file)loadFile(file,true);else notify('Перетащи файл ETS2 с расширением .pmtiles.',true);});
+(async()=>{
+ try{
+  const saved=await getStored();
+  if(saved?.data){
+   const file=new File([saved.data],saved.name||'ets2.pmtiles',{type:'application/octet-stream'});
+   await loadFile(file,false);
+  }else notify('Скачай архив ETS2 PMTiles и выбери его слева. После загрузки файл сохранится в браузере.');
+ }catch(err){notify('Выбери скачанный архив .pmtiles слева. Автосохранение в этом браузере недоступно.');}
+})();
+})();
+</script>
+</body>
+</html>
